@@ -73,11 +73,13 @@ function netmap_open(config, ringid, tx)
 		return nil
 	end
 
-	-- check if we need to mmap do so if needed
+	-- check if we need to mmap, do so if needed
 	if mmaped[config.iface] == nil then:
 		local mem = netmapc.mmap(0, nmr.nr_memsize, PROT_READ_WRITE, MAP_SHARED, fd, 0);
-		mmaped[fd] = mem
+		mmaped[config.iface] = mem
 	end
+
+	desc.mem = mmaped[config.iface]
 
 	-- finally return the descriptor
 	return desc
