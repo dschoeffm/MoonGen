@@ -4,7 +4,7 @@ local netmapc = require "netmapc"
 local Netmap_ring = {}
 Netmap_ring.__index = Netmap_ring
 
-ffi.metatype("netmap_ring*", Netmap_ring)
+ffi.metatype("struct netmap_ring*", Netmap_ring)
 
 -- Returns a netmap ring object
 function Netmap_ring:create(fd, nifp, index, tx)
