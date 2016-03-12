@@ -9,21 +9,21 @@ ffi.metatype("struct netmap_ring*", Netmap_ring)
 -- Returns a netmap ring object
 function Netmap_ring:create(fd, nifp, index, tx)
 	local c
-	if tx == 1 then
+	if tx then
 		c = netmapc.NETMAP_TXRING(nifp, index)
-	else if tx == 0 then
+	else 
 		c = netmapc.NETMAP_RXRING(nifp, index)
 	end
-	else 
-		print("netmap_ring: tx should be 1 or 0")
-	end
+
 	r = {}
 	r.tx = tx
 	r.fd = fd
 	r.c = c
 	r.pos = c.head
 	c.cur = c.head
+
 	setmetatable(r, self)
+
 	return r
 end
 
@@ -31,10 +31,10 @@ end
 function Netmap_ring:sync()
 	self.c.cur = self.pos
 	self.c.head = self.pos
-	if self.tx == 1 then
+	if self.tx then
 		netmapc.ioctl(self.fd, NIOCTXSYNC)
 		return
-	else if self.tx == 0 then
+	else
 		netmapc.ioctl(self.fd, NIOCRXSYNC)
 		return
 	end
