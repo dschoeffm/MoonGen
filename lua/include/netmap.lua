@@ -1,7 +1,8 @@
 local netmapc = require "netmapc"
 local ffi = require "ffi"
 
-local mmaped = {}
+local mmaped = false
+local mem
 
 local function check_rings_slots(config, nmr)
 	if config.nr_tx_rings ~= nmr.nr_tx_rings then
@@ -33,10 +34,11 @@ local function print_nmr(nmr)
 	print("nr_flags: " .. nmr.flags)
 end
 
--- iface: which interface to use (e.g. eth0)
--- ringid: number of the ring
--- tx: 1 if ring is tx, 0 is rx
-function netmap_open(config, ringid, tx)
+--- Opens the netmap device
+--- @param iface: which interface to use (e.g. eth0)
+--- @param ringid: number of the ring
+--- @return Descriptor used by other functions
+function mod.netmapOpen(iface, ringid)
 	-- open the netmap control file
 	local fd = netmapc.open("/dev/netmap", O_RDWR)
 	if fd == -1 then
@@ -50,14 +52,15 @@ function netmap_open(config, ringid, tx)
 	-- create request and populate it from the config
 	local nmr = ffi.new("struct nmreq")
 	desc.nmr = nmr
-	nmr.nr_name = config.iface
+	nmr.nr_name = iface
 	nmr.nr_version = NETMAP_API
 	nmr.nr_flags = NR_REG_ONE_NIC
 	nmr.nr_ringid = ringid
-	nmr.nr_tx_rings = config.nr_tx_rings
-	nmr.nr_rx_rings = config.nr_rx_rings
-	nmr.nr_tx_slots = config.nr_tx_slots
-	nmr.nr_rx_slots = config.nr_rx_slots
+	-- not reliably supported anyways
+	--nmr.nr_tx_rings = config.nr_tx_rings
+	--nmr.nr_rx_rings = config.nr_rx_rings
+	--nmr.nr_tx_slots = config.nr_tx_slots
+	--nmr.nr_rx_slots = config.nr_rx_slots
 
 	-- do ioctl to register the device
 	local ret = ioctl(fd, NIOCREGIF, nmr)
@@ -66,31 +69,14 @@ function netmap_open(config, ringid, tx)
 		return nil
 	end
 
-	-- check if we got as much rings as slots as we expected
-	if check_rings_slots(config, nmr) == -1 then
-		print("Please adjust config")
-		print_nmr(nmr)
-		return nil
+	-- mmap if not happend before
+	if not mmaped then
+		mem = netmapc.mmap(0, nmr.nr_memsize, PROT_READ_WRITE, MAP_SHARED, fd, 0);
+		mmaped = true
 	end
 
-	-- check if we need to mmap, do so if needed
-	if mmaped[config.iface] == nil then:
-		local mem = netmapc.mmap(0, nmr.nr_memsize, PROT_READ_WRITE, MAP_SHARED, fd, 0);
-		mmaped[config.iface] = mem
-	end
-
-	desc.mem = mmaped[config.iface]
+	desc.mem = mem
 
 	-- finally return the descriptor
 	return desc
 end
-
-function txsync(fd)
-	netmapc.ioctl(fd, NIOCTXSYNC)
-end
-
-function rxsync(fd)
-	netmapc.ioctl(fd, NIOCRXSYNC)
-end
-
--- TODO blocking poll stuff
