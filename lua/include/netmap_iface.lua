@@ -1,34 +1,38 @@
 local ffi = require "ffi"
 local netmapc = require "netmapc"
-local Netmap_ring = require "netmap_ring"
+local NetmapRing = require "netmap_ring"
 
-local Netmap_iface = {}
-Netmap_iface.__index = Netmap_iface
+local NetmapIface = {}
+NetmapIface.__index = NetmapIface
 
-ffi.metatype("struct netmap_if*", Netmap_iface)
 
--- Returns a netmap ring object
-function Netmap_iface:create(desc)
-	r = {}
+-- Create Netmap Interface
+-- @return Interface as object
+function NetmapIface:create(desc)
+	r = netmapc.NETMAP_IF(desc.mem, desc.nr_offset)
 	setmetatable(r, self)
-	r.c = netmapc.NETMAP_IF(desc.mem, desc.c.nr_offset)
-	r.tx_rings = r.c.ni_tx_rings -- copy over should be faster accessible
-	r.rx_rings = r.c.ni_rx_rings
 	r.fd = desc.fd
 	return r
 end
 
 -- Get a ring of the interface
-function Netmap_iface:get_ring(index, tx)
-	if tx and not index < self.tx_rings then
+-- @return Ring as object
+function NetmapIface:getRing(index, tx)
+	if tx and not index < self.ni_tx_rings then
 		print("Netmap_iface:get_ring() wrong index")
 		return nil
-	else if not tx and not index < self.rx_rings then 
+	else if not tx and not index < self.ni_rx_rings then 
 		print("Netmap_iface:get_ring() wrong index")
 		return nil
 	end
 
-	return Netmap_ring:create(self.fd, self.c, index, tx)
+	return NetmapRing:create(self.fd, self, index, tx)
 end
 
-return Netmap_iface
+------------------------------------------------------------------------
+---- Metatypes
+------------------------------------------------------------------------
+
+ffi.metatype("struct netmap_if", NetmapIface) -- XXX is this done by the cast already?
+
+return NetmapIface
