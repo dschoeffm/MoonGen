@@ -31,6 +31,7 @@ function mod.createMemPool(...)
 		print("[ERROR] Currently only tables are supported in netmapMemory.createMemPool()")
 		return nil
 	end
+	args = args[1]
 	if not args.queue then
 		print("[ERROR] When using Netmap, a ring needs to be given in the .queue argument")
 		return nil
