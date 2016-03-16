@@ -79,7 +79,7 @@ function mempool:bufArray(n)
 		maxSize = n,
 		array = 0, --TODO where will this be used afterall? (was there with DPDK)
 		mem = self,
-		first = self.queue.head 
+		first = self.queue.head, 
 		last = (self.queue.head + n) % self.queue.num_slots
 	}, bufArray)
 end

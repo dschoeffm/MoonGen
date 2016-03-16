@@ -200,7 +200,7 @@ ffi.cdef[[
 //int open(const char *pathname, int flags, mode_t mode);
 //int ioctl(int fd, unsigned long request, ...);
 void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
-int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+//int poll(struct pollfd *fds, nfds_t nfds, int timeout);
 
 // from man 2 poll
 struct pollfd {
@@ -212,14 +212,14 @@ struct pollfd {
 static const int O_RDWR 00000002; ///usr/include/asm-generic/fcntl.h
 
 // from /usr/include/asm-generic/mman-common.h
-static const int PROT_READ = 0x1
-static const int PROT_WRITE = 0x2
-static const int PROT_READ_WRITE = 0x3 // this is my own
-static const int PROT_EXEC = 0x4
-static const int PROT_SEM = 0x8
-static const int PROT_NONE = 0x0
-static const int MAP_SHARED = 0x1
-static const int MAP_PRIVATE = 0x2
+static const int PROT_READ = 0x1;
+static const int PROT_WRITE = 0x2;
+static const int PROT_READ_WRITE = 0x3; // this is my own
+static const int PROT_EXEC = 0x4;
+static const int PROT_SEM = 0x8;
+static const int PROT_NONE = 0x0;
+static const int MAP_SHARED = 0x1;
+static const int MAP_PRIVATE = 0x2;
 ]]
 
 
