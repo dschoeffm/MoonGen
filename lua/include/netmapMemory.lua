@@ -7,6 +7,7 @@
 local netmapc = require "netmapc"
 local packet = require "packet"
 local ffi = require "ffi"
+local log = require "log"
 
 local mod = {}
 
@@ -26,19 +27,19 @@ mempool.__index = mempool
 function mod.createMemPool(...)
 	local args = {...}
 	if type(args[1]) ~= table then
-		print("[ERROR] Currently only tables are supported in netmapMemory.createMemPool()")
+		log:fatal("Currently only tables are supported in netmapMemory.createMemPool()")
 		return nil
 	end
 	args = args[1]
 	if not args.queue then
-		print("[ERROR] When using Netmap, a ring needs to be given in the .queue argument")
+		log:fatal("When using Netmap, a ring needs to be given in the .queue argument")
 		return nil
 	end
 	if args.n or args.socket or args.bufSize then
-		print("[WARNING] You set variables intended for DPDK, they are ignored by netmap")
+		log:warn("You set variables intended for DPDK, they are ignored by netmap")
 	end
 	if args.queue.num_slots ~= args.queue.avail() then
-		print("[ERROR] Packets left in the ring - probably not what you want")
+		log:error("Packets left in the ring - probably not what you want")
 		return nil
 	end
 	local mem = {}
@@ -68,7 +69,7 @@ function mempool:bufArray(n)
 	n = n or 63
 	self.batch_size = n
 	if n > self.queue.num_slots then
-		print("[ERROR] not enough slots in the memory pool / ring - check your config")
+		log:fatal("not enough slots in the memory pool / ring - check your config")
 		return nil
 	end
 	while self.queue:avail() < n do -- block / busy wait until array size is satisfied
@@ -179,7 +180,5 @@ function netmapSlot:flags(flags)
 end
 
 ffi.metatype("struct netmap_slot", netmapSlot)
-
-
 
 return mod

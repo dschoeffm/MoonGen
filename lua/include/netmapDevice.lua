@@ -6,6 +6,7 @@
 
 local netmapc = require "netmapc"
 local ffi = require "ffi"
+local log = require "log"
 
 local mod = {} -- local module
 
@@ -25,14 +26,14 @@ local mem = 0
 --- @param ringid: index of the requested ring
 local function openDevice(self, ringid)
 	if not ringid or self.fd[ringid] then
-		print("[ERROR] no ringid was given, or ring was opened already")
+		log:error("no ringid was given, or ring was opened already")
 		return nil
 	end
 	-- open the netmap control file
 	--local fd = netmapc.open("/dev/netmap", O_RDWR)
 	local fd = netmapc.open_wrapper()
 	if fd == -1 then
-		print("Error opening /dev/netmap")
+		log:fatal("Error opening /dev/netmap")
 		return nil
 	end
 
@@ -53,7 +54,7 @@ local function openDevice(self, ringid)
 	--local ret = netmapc.ioctl(fd, NIOCREGIF, nmr)
 	local ret = netmapc.ioctl_NIOCREGIF(fd, nmr)
 	if ret == -1 then
-		print("Error issuing NIOCREGIF")
+		log:fatal("Error issuing NIOCREGIF")
 		return nil
 	end
 
@@ -75,7 +76,7 @@ end
 function mod.config(...)
 	local args = {...}
 	if type(args[1]) ~= "table" then
-		print("[ERROR] Currently only tables are supported in netmapDevice.config()")
+		log:fatal("Currently only tables are supported in netmapDevice.config()")
 		return nil
 	end
 	args = args[1]
@@ -113,7 +114,7 @@ end
 --- @return Netmap tx queue object
 function dev:getTxQueue(id)
 	if not id < self.nmr.nr_tx_rings then
-		print("[ERROR] tx queue id is too high")
+		log:error("[ERROR] tx queue id is too high")
 		return nil
 	end
 	if not self.fd[id] then
