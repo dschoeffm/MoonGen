@@ -46,7 +46,7 @@ enum api{
 	NETMAP_MAX_API = 15;
 };
 
-static const int NM_CACHE_ALIGN = 128 
+static const int NM_CACHE_ALIGN = 128; 
 
 // struct netmap_slot is a buffer descriptor
 struct netmap_slot {
