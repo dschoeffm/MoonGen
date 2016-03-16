@@ -103,7 +103,7 @@ static const uint16_t NI_PRIV_MEM = 0x1;
 
 //struct nmreq defines the request for a netmap device
 struct nmreq {
-	char		nr_name[16];
+	char		nr_name[IFNAMSIZ];
 	uint32_t	nr_version;	/* API version */
 	uint32_t	nr_offset;	/* nifp offset in the shared region */
 	uint32_t	nr_memsize;	/* size of the shared region */
@@ -163,26 +163,42 @@ static const uint16_t NT_TX_RINGS_ONLY = 0x4000;
 static const uint16_t NR_ACCEPT_VNET_HDR = 0x8000;
 
 // extracted from sample program
+/* now done via c libary
 static const unsigned long NIOCGINFO = 3225184657;
 static const unsigned long NIOCREGIF = 3225184658;
 static const unsigned long NIOCTXSYNC = 27028;
 static const unsigned long NIOCRXSYNC = 27029;
 static const unsigned long NIOCCONFIG = 3239078294;
+*/
 ]]
 
--- macros from netmap_user.h
+-- functions provided by C libary
 ffi.cdef[[
+struct netmap_if* NETMAP_IF_wrapper(uint64_t base, uint32_t ofs);
+struct netmap_ring* NETMAP_TXRING_wrapper(struct netmap_if* nifp, uint32_t index);
+struct netmap_ring* NETMAP_RXRING_wrapper(struct netmap_if* nifp, uint32_t index);
+char* NETMAP_BUF_wrapper(struct netmap_ring* ring, uint32_t index);
+uint64_t NETMAP_BUF_IDX_wrapper(struct netmap_ring* ring, char* buf);
+
+int open_wrapper();
+int ioctl_NIOCGINFO(int fd, struct nmreq* nmr);
+int ioctl_NIOCREGIF(int fd, struct nmreq* nmr);
+int ioctl_NIOCTXSYNC(int fd);
+int ioctl_NIOCRXSYNC(int fd);
+
+/*
 struct netmap_if* NETMAP_IF(_base, _ofs);
 struct netmap_ring* NETMAP_TXRING(nifp, index);
 struct netmap_ring* NETMAP_RXRING(nifp, index);
-struct char* NETMAP_BUF(ring, index);
+char* NETMAP_BUF(ring, index);
 uing32_t NETMAP_BUF_IDX(ring, buf);
+*/
 ]]
 
 -- functions and constants from the c stdlib and linux
 ffi.cdef[[
-int open(const char *pathname, int flags, mode_t mode);
-int ioctl(int fd, unsigned long request, ...);
+//int open(const char *pathname, int flags, mode_t mode);
+//int ioctl(int fd, unsigned long request, ...);
 void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
 int poll(struct pollfd *fds, nfds_t nfds, int timeout);
 

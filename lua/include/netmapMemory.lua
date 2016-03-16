@@ -45,7 +45,7 @@ function mod.createMemPool(...)
 	mem.queue = args.queue
 	mem.mbufs = ffi.new("struct rte_mbuf[?]", args.queue.num_slots)
 	for i=0,args.queue.num_slots do
-		mem.mbufs[i].pkt.data = netmapc.NETMAP_BUF(mem.queue, i) 
+		mem.mbufs[i].pkt.data = netmapc.NETMAP_BUF_wrapper(mem.queue, i) 
 		mem.mbufs[i].pkt.slot = netmapSlot.create(mem.queue, i) -- XXX do I need this?
 		setmetatable(mem.mbufs[i], packet) -- XXX is this correct?
 	end

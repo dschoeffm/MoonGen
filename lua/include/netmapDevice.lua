@@ -28,7 +28,8 @@ local function openDevice(self, ringid)
 		return nil
 	end
 	-- open the netmap control file
-	local fd = netmapc.open("/dev/netmap", O_RDWR)
+	--local fd = netmapc.open("/dev/netmap", O_RDWR)
+	local fd = netmapc.open_wrapper()
 	if fd == -1 then
 		print("Error opening /dev/netmap")
 		return nil
@@ -48,7 +49,8 @@ local function openDevice(self, ringid)
 	--nmr.nr_rx_slots = config.nr_rx_slots
 
 	-- do ioctl to register the device
-	local ret = ioctl(fd, NIOCREGIF, nmr)
+	--local ret = netmapc.ioctl(fd, NIOCREGIF, nmr)
+	local ret = netmapc.ioctl_NIOCREGIF(fd, nmr)
 	if ret == -1 then:
 		print("Error issuing NIOCREGIF")
 		return nil
@@ -62,7 +64,7 @@ local function openDevice(self, ringid)
 
 	self.mem = mem
 	self.fd[ringid] = fd
-	self.nifp[ringid] = netmapc.NETMAP_IF(mem, nmr.nr_offset)
+	self.nifp[ringid] = netmapc.NETMAP_IF_wrapper(mem, nmr.nr_offset)
 end
 
 --- Configures a device
@@ -119,7 +121,7 @@ function dev:getTxQueue(id)
 
 	local queue = {}
 	setmetatable(queue, txQueue)
-	queue.nmRing = netmapc.NETMAP_TXRING(self.nifp[id], id) -- XXX is this correct? (seems to be)
+	queue.nmRing = netmapc.NETMAP_TXRING_wrapper(self.nifp[id], id) -- XXX is this correct? (seems to be)
 	queue.fd = self.fd[id]
 end
 
@@ -137,7 +139,7 @@ function dev:getRxQueue(id)
 
 	local queue = {}
 	setmetatable(queue, rxQueue)
-	queue.nmRing = netmapc.NETMAP_RXRING(self.nifp[id], id) -- XXX is this correct? (seems to be)
+	queue.nmRing = netmapc.NETMAP_RXRING_wrapper(self.nifp[id], id) -- XXX is this correct? (seems to be)
 	-- XXX set metatype?
 	queue.fd = self.fd[id]
 end
@@ -151,7 +153,7 @@ txQueue.__index = txQueue
 
 --- Sync the SW view with the HW view
 function txQueue:sync()
-	netmapc.ioctl(self.fd, netmapc.NIOCTXSYNC)
+	netmapc.ioctl_NIOCREGIF(self.fd)
 end
 
 --- Send the current buffer
