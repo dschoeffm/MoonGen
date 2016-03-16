@@ -5,6 +5,7 @@
 ---------------------------------
 
 local netmapc = require "netmapc"
+local ffi = require "ffi"
 
 local mod = {} -- local module
 
@@ -23,7 +24,7 @@ local mem = 0
 --- @param self: device object
 --- @param ringid: index of the requested ring
 local function openDevice(self, ringid)
-	if not ringid or self.fds[ringid] then
+	if not ringid or self.fd[ringid] then
 		print("[ERROR] no ringid was given, or ring was opened already")
 		return nil
 	end
@@ -51,7 +52,7 @@ local function openDevice(self, ringid)
 	-- do ioctl to register the device
 	--local ret = netmapc.ioctl(fd, NIOCREGIF, nmr)
 	local ret = netmapc.ioctl_NIOCREGIF(fd, nmr)
-	if ret == -1 then:
+	if ret == -1 then
 		print("Error issuing NIOCREGIF")
 		return nil
 	end
@@ -73,7 +74,7 @@ end
 --- @return Netmap device object
 function mod.config(...)
 	local args = {...}
-	if type(args[1]) ~= table then
+	if type(args[1]) ~= "table" then
 		print("[ERROR] Currently only tables are supported in netmapDevice.config()")
 		return nil
 	end
@@ -85,7 +86,7 @@ function mod.config(...)
 	dev_ret.iface = args.port
 	dev_ret.fd = {}
 
-	dev_ret:openDevice(0)
+	openDevice(dev_ret, 0)
 
 	devices[dev_ret.iface] = dev_ret
 
@@ -180,7 +181,7 @@ function txQueue:setRate(rate)
 	-- is something like this supported at all?
 end
 
-ffi.metatype("struct netmap_ring*", txQueue) -- XXX needed? 
+-- ffi.metatype("struct netmap_ring*", txQueue) -- XXX needed? Throws an error
 
 ----------------------------------------------------------------------------------
 ---- Netmap Rx Queue
@@ -189,7 +190,7 @@ ffi.metatype("struct netmap_ring*", txQueue) -- XXX needed?
 local rxQueue = {}
 rxQueue.__index = rxQueue
 --- TODO
-ffi.metatype("struct netmap_ring*", rxQueue)
+--ffi.metatype("struct netmap_ring*", rxQueue) -- Throws an error
 
 
 return mod

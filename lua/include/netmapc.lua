@@ -41,9 +41,9 @@ local ffi = require "ffi"
 ffi.cdef[[
 // API version
 enum api{
-	NETMAP_API = 11;
-	NETMAP_MIN_API = 11;
-	NETMAP_MAX_API = 15;
+	NETMAP_API = 11,
+	NETMAP_MIN_API = 11,
+	NETMAP_MAX_API = 15,
 };
 
 static const int NM_CACHE_ALIGN = 128; 
@@ -87,18 +87,16 @@ static const uint16_t NR_FORWARD = 0x0004;
 
 // struct netmap_if defines one interface and refers to rings
 struct netmap_if {
-	char		ni_name[IFNAMSIZ]; /* name of the interface. */
+	char		ni_name[16]; /* name of the interface. */ // originally IFNAMSIZ instead of 16
 	const uint32_t	ni_version;	/* API version, currently unused */
 	const uint32_t	ni_flags;	/* properties */
 	const uint32_t	ni_tx_rings;	/* number of HW tx rings */
 	const uint32_t	ni_rx_rings;	/* number of HW rx rings */
 	uint32_t	ni_bufs_head;	/* head index for extra bufs */
 	uint32_t	ni_spare1[5];
-	const ssize_t	ring_ofs[0];
+	const uint64_t	ring_ofs[0]; // originally ssize_t
 };
 
-// net/if.h -> IF_NAMESIZE = 16
-static const uint16_t IFNAMSIZ = 16;
 static const uint16_t NI_PRIV_MEM = 0x1;
 
 //struct nmreq defines the request for a netmap device
@@ -199,7 +197,7 @@ uing32_t NETMAP_BUF_IDX(ring, buf);
 ffi.cdef[[
 //int open(const char *pathname, int flags, mode_t mode);
 //int ioctl(int fd, unsigned long request, ...);
-void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+void *mmap(void *addr, size_t length, int prot, int flags, int fd, uint64_t offset); // originally off_t
 //int poll(struct pollfd *fds, nfds_t nfds, int timeout);
 
 // from man 2 poll
@@ -209,7 +207,7 @@ struct pollfd {
 	short revents;    /* returned events */
 };
 
-static const int O_RDWR 00000002; ///usr/include/asm-generic/fcntl.h
+static const int O_RDWR = 00000002; ///usr/include/asm-generic/fcntl.h
 
 // from /usr/include/asm-generic/mman-common.h
 static const int PROT_READ = 0x1;

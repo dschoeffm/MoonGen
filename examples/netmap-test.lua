@@ -2,7 +2,7 @@
 local memory	= require "netmapMemory"
 local device	= require "netmapDevice"
 --local stats		= require "stats"
---local log 		= require "log"
+local log 		= require "log"
 local ffi = require "ffi"
 
 function master(txPorts, minIp, numIps, rate)
@@ -14,13 +14,17 @@ function master(txPorts, minIp, numIps, rate)
 	minIp = minIp or "10.0.0.1"
 	numIps = numIps or 100
 	rate = rate or 0
-	for currentTxPort in txPorts:gmatch("(%d+),?") do
-		currentTxPort = tonumber(currentTxPort) 
-		local txDev = device.config{ port = currentTxPort }
+	currentTxPort = txPorts  -- lets assume only one port
+		--currentTxPort = tonumber(currentTxPort)
+		log:info("before device.config")
+		local txDev = device.config({ port = currentTxPort })
+		log:info("before txDev:wait()")
 		txDev:wait()
+		log:info("before txDev:get:TXQueue(0):setRate(rate)")
 		txDev:getTxQueue(0):setRate(rate)
+		log:info("before dpdk.launchLua()")
 		dpdk.launchLua("loadSlave", currentTxPort, 0, minIp, numIps)
-	end
+
 	--dpdk.waitForSlaves()
 	ffi.cdef[[unsigned int sleep(unsigned int seconds);]]
 	ffi.C.sleep(20)
@@ -28,6 +32,7 @@ end
 
 function loadSlave(port, queue, minA, numIPs)
 	--- parse and check ip addresses
+	log:info("started slave on port: " .. port .. " queue: " .. queue)
 	local minIP, ipv4 = parseIPAddress(minA)
 	if minIP then
 		log:info("Detected an %s address.", minIP and "IPv4" or "IPv6")
