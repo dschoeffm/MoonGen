@@ -4,11 +4,9 @@
 --- @todo feature level of DPDK
 ---------------------------------
 
-local netmapRing = require "netmapRing"
 local netmapc = require "netmapc"
 local packet = require "packet"
 local ffi = require "ffi"
-local netmapSlot = require "netmapSlot"
 
 local mod = {}
 
@@ -48,7 +46,7 @@ function mod.createMemPool(...)
 	mem.mbufs = ffi.new("struct rte_mbuf[?]", args.queue.num_slots)
 	for i=0,args.queue.num_slots do
 		mem.mbufs[i].pkt.data = netmapc.NETMAP_BUF(mem.queue, i) 
-		mem.mbufs[i].pkt.slot = netmapSlot(mem.queue, i) -- XXX do I need this?
+		mem.mbufs[i].pkt.slot = netmapSlot.create(mem.queue, i) -- XXX do I need this?
 		setmetatable(mem.mbufs[i], packet) -- XXX is this correct?
 	end
 
@@ -109,6 +107,7 @@ function bufArray:alloc(len)
 	end
 	for _, buf in ipairs(self) do
 		buf.len = len -- XXX is this sufficient -> buf.data.data_len, buf.data.pkt_len
+		buf.pkt.slot.len = len
 	end
 end
 
@@ -142,6 +141,44 @@ function bufArray:offloadTcpChecksums(ipv4, l2Len, l3Len)
 	-- do nothing for now
 end
 
+----------------------------------------------------------------------------------
+---- Netmap slots (internal use only)
+----------------------------------------------------------------------------------
+local netmapSlot = {}
+netmapSlot.__index = netmapSlot
+
+--- Returns a netmap ring object
+--- @param ring: a netmap ring
+--- @param index: id of the slot
+--- @return a netmap slot object
+function netmapSlot:create(ring, index)
+	r = ffi.cast("struct netmap_slot", ring.slot[index])
+	setmetatable(r, self)
+	r.ring = ring -- XXX Do I need this?
+	return r
+end
+
+--- Get/Set the length of a packet
+--- @param length: length of the packet described in this slot (optional)
+--- @return Current value of the length field
+function netmapSlot:len(length)
+	if length ~= nil then
+		self.len = length
+	end
+	return self.len
+end
+
+--- Get/Set flags of the packet
+--- @param flags: new flags value, replacing the old one (optional)
+--- @return Currently set flags
+function netmapSlot:flags(flags)
+	if flags ~= nil then
+		self.flags = flags
+	end
+	return self.flags
+end
+
+ffi.metatype("struct netmap_slot", netmapSlot)
 
 
 
