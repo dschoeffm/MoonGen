@@ -6,7 +6,7 @@
 #include <sys/mman.h>
 #include <poll.h>
 
-struct netmap_if* NETMAP_IF_wrapper(uint64_t base, uint32_t ofs){
+struct netmap_if* NETMAP_IF_wrapper(void* base, uint32_t ofs){
 	return NETMAP_IF(base, ofs);
 }
 

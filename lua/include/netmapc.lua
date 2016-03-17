@@ -172,7 +172,7 @@ static const unsigned long NIOCCONFIG = 3239078294;
 
 -- functions provided by C libary
 ffi.cdef[[
-struct netmap_if* NETMAP_IF_wrapper(uint64_t base, uint32_t ofs);
+struct netmap_if* NETMAP_IF_wrapper(void* base, uint32_t ofs);
 struct netmap_ring* NETMAP_TXRING_wrapper(struct netmap_if* nifp, uint32_t index);
 struct netmap_ring* NETMAP_RXRING_wrapper(struct netmap_if* nifp, uint32_t index);
 char* NETMAP_BUF_wrapper(struct netmap_ring* ring, uint32_t index);

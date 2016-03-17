@@ -1,4 +1,4 @@
---local dpdk		= require "dpdk"
+local dpdk		= require "dpdk"
 local memory	= require "netmapMemory"
 local device	= require "netmapDevice"
 --local stats		= require "stats"
@@ -22,13 +22,13 @@ function master(txPorts, minIp, numIps, rate)
 		log:info("before txDev:wait()")
 		txDev:wait()
 		log:info("before txDev:get:TXQueue(0):setRate(rate)")
-		txDev:getTxQueue(0):setRate(rate)
+		--txDev:getTxQueue(0):setRate(rate)
 		log:info("before dpdk.launchLua()")
 		dpdk.launchLua("loadSlave", currentTxPort, 0, minIp, numIps)
 
 	--dpdk.waitForSlaves()
 	ffi.cdef[[unsigned int sleep(unsigned int seconds);]]
-	ffi.C.sleep(20)
+	ffi.C.sleep(10)
 end
 
 function loadSlave(port, queue, minA, numIPs)
@@ -43,9 +43,10 @@ function loadSlave(port, queue, minA, numIPs)
 
 	-- min TCP packet size for IPv6 is 74 bytes (+ CRC)
 	local packetLen = ipv4 and 60 or 74
-	
+
 	-- continue normally
-	local queue = device.get(port):getTxQueue(queue)
+	local dev = device.get(port)
+	local queue = dev:getTxQueue(queue)
 	local mem = memory.createMemPool(function(buf)
 		buf:getTcpPacket(ipv4):fill{ 
 			ethSrc="90:e2:ba:2c:cb:02", ethDst="90:e2:ba:35:b5:81", 

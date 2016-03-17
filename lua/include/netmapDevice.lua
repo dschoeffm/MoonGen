@@ -16,10 +16,10 @@ local mod = {} -- local module
 
 local dev = {}
 dev.__index = dev
-local devices = {}
+mod.devices = {}
 
-local mmaped = false
-local mem = 0
+mod.mmaped = false
+mod.mem = 0
 
 --- Opens the netmap device (helper function, internal use only)
 --- @param self: device object
@@ -61,15 +61,15 @@ local function openDevice(self, ringid)
 	end
 
 	-- mmap if not happend before
-	if not mmaped then
+	if not mod.mmaped then
 		log:debug("memory mapping the DMA region now")
-		mem = netmapc.mmap(0, nmr.nr_memsize, PROT_READ_WRITE, MAP_SHARED, fd, 0);
-		mmaped = true
+		mod.mem = netmapc.mmap(nil, nmr[0].nr_memsize, netmapc.PROT_READ_WRITE, netmapc.MAP_SHARED, fd, 0);
+		mod.mmaped = true
 	end
 
-	self.mem = mem
+	self.mem = mod.mem
 	self.fd[ringid] = fd
-	self.nifp[ringid] = netmapc.NETMAP_IF_wrapper(mem, nmr.nr_offset)
+	self.nifp[ringid] = netmapc.NETMAP_IF_wrapper(mod.mem, nmr[0].nr_offset)
 end
 
 --- Configures a device
@@ -89,10 +89,11 @@ function mod.config(...)
 	setmetatable(dev_ret, dev)
 	dev_ret.iface = args.port
 	dev_ret.fd = {}
+	dev_ret.nifp = {}
 
 	openDevice(dev_ret, 0)
 
-	devices[dev_ret.iface] = dev_ret
+	mod.devices[dev_ret.iface] = dev_ret
 
 	return dev_ret
 end
@@ -101,7 +102,11 @@ end
 --- @param iface: interface name (eg. eth1)
 --- @return Netmap device object
 function mod.get(iface)
-	return devices[iface]
+	local d = mod.devices[iface]
+	if d == nil then
+		log:fatal("tried to get uninitialized device: " .. iface)
+	end
+	return d
 end
 
 --- Wait for the links to come up
@@ -116,12 +121,12 @@ end
 --- @param id: index of the queue
 --- @return Netmap tx queue object
 function dev:getTxQueue(id)
-	if not id < self.nmr.nr_tx_rings then
+	if not (id < self.nmr[0].nr_tx_rings) then
 		log:error("[ERROR] tx queue id is too high")
 		return nil
 	end
 	if not self.fd[id] then
-		self:openDevice(id)
+		openDevice(self, id)
 	end
 
 	local queue = {}
@@ -135,7 +140,7 @@ end
 --- @param id: index of the queue
 --- @return Netmap rx queue object
 function dev:getRxQueue(id)
-	if not id < self.nmr.nr_rx_rings then
+	if not (id < self.nmr[0].nr_rx_rings) then
 		log:error("[ERROR] tx queue id is too high")
 		return nil
 	end
