@@ -101,7 +101,7 @@ static const uint16_t NI_PRIV_MEM = 0x1;
 
 //struct nmreq defines the request for a netmap device
 struct nmreq {
-	char		nr_name[IFNAMSIZ];
+	char		nr_name[16];
 	uint32_t	nr_version;	/* API version */
 	uint32_t	nr_offset;	/* nifp offset in the shared region */
 	uint32_t	nr_memsize;	/* size of the shared region */

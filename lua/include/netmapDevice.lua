@@ -39,7 +39,7 @@ local function openDevice(self, ringid)
 	end
 
 	-- create request and populate it from the config
-	local nmr = ffi.new("struct nmreq*")
+	local nmr = ffi.new("struct nmreq[1]")
 	self.nmr = nmr
 	nmr.nr_name = self.iface
 	nmr.nr_version = netmapc.NETMAP_API

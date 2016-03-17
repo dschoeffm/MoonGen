@@ -6,6 +6,7 @@ local log 		= require "log"
 local ffi = require "ffi"
 
 function master(txPorts, minIp, numIps, rate)
+	log.level = 0
 	if not txPorts then
 		log:info("usage: txPort1[,txPort2[,...]] [minIP numIPs rate]")
 		return
