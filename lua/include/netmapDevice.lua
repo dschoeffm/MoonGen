@@ -41,10 +41,10 @@ local function openDevice(self, ringid)
 	-- create request and populate it from the config
 	local nmr = ffi.new("struct nmreq[1]")
 	self.nmr = nmr
-	nmr.nr_name = self.iface
-	nmr.nr_version = netmapc.NETMAP_API
-	nmr.nr_flags = netmapc.NR_REG_ONE_NIC
-	nmr.nr_ringid = ringid -- TODO NETMAP_NO_TX_POLL should be set
+	nmr[0].nr_name = self.iface
+	nmr[0].nr_version = netmapc.NETMAP_API
+	nmr[0].nr_flags = netmapc.NR_REG_ONE_NIC
+	nmr[0].nr_ringid = ringid -- TODO NETMAP_NO_TX_POLL should be set
 	-- not reliably supported anyways
 	--nmr.nr_tx_rings = config.nr_tx_rings
 	--nmr.nr_rx_rings = config.nr_rx_rings
