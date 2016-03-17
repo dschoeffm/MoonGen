@@ -44,6 +44,7 @@ function mod.createMemPool(...)
 	end
 	local mem = {}
 	mem.queue = args.queue
+	log:debug("allocating mbufs now")
 	mem.mbufs = ffi.new("struct rte_mbuf[?]", args.queue.num_slots)
 	for i=0,args.queue.num_slots do
 		mem.mbufs[i].pkt.data = netmapc.NETMAP_BUF_wrapper(mem.queue, i) 
@@ -52,6 +53,7 @@ function mod.createMemPool(...)
 	end
 
 	if args.func then
+		log:debug("running prepare functions on all mbufs")
 		for buf in mem.mbufs do
 			args.func(buf)
 		end
@@ -75,13 +77,14 @@ function mempool:bufArray(n)
 	while self.queue:avail() < n do -- block / busy wait until array size is satisfied
 		self.queue:sync()
 	end
+	log:debug("generating buffer array")
 	return setmetatable({
 		size = n,
 		maxSize = n,
 		array = 0, --TODO where will this be used afterall? (was there with DPDK)
 		mem = self,
 		first = self.queue.head, 
-		last = (self.queue.head + n) % self.queue.num_slots
+		last = (self.queue.head + n) % self.queue.num_slots -- XXX if-then-else might be faster
 	}, bufArray)
 end
 
@@ -106,6 +109,7 @@ function bufArray:alloc(len)
 	if self.last > queue.num_slots then
 		self.last = self.last - queue.num_slots
 	end
+	log:debug("update the length fields")
 	for _, buf in ipairs(self) do
 		buf.len = len -- XXX is this sufficient -> buf.data.data_len, buf.data.pkt_len
 		buf.pkt.slot.len = len

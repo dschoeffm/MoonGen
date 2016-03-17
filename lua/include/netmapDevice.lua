@@ -31,6 +31,7 @@ local function openDevice(self, ringid)
 	end
 	-- open the netmap control file
 	--local fd = netmapc.open("/dev/netmap", O_RDWR)
+	log:debug("opening /dev/netmap now")
 	local fd = netmapc.open_wrapper()
 	if fd == -1 then
 		log:fatal("Error opening /dev/netmap")
@@ -52,6 +53,7 @@ local function openDevice(self, ringid)
 
 	-- do ioctl to register the device
 	--local ret = netmapc.ioctl(fd, NIOCREGIF, nmr)
+	log:debug("issuing NIOCREGIF now")
 	local ret = netmapc.ioctl_NIOCREGIF(fd, nmr)
 	if ret == -1 then
 		log:fatal("Error issuing NIOCREGIF")
@@ -60,6 +62,7 @@ local function openDevice(self, ringid)
 
 	-- mmap if not happend before
 	if not mmaped then
+		log:debug("memory mapping the DMA region now")
 		mem = netmapc.mmap(0, nmr.nr_memsize, PROT_READ_WRITE, MAP_SHARED, fd, 0);
 		mmaped = true
 	end
@@ -123,6 +126,7 @@ function dev:getTxQueue(id)
 
 	local queue = {}
 	setmetatable(queue, txQueue)
+	log:debug("getting tx ring now")
 	queue.nmRing = netmapc.NETMAP_TXRING_wrapper(self.nifp[id], id) -- XXX is this correct? (seems to be)
 	queue.fd = self.fd[id]
 end
@@ -132,7 +136,7 @@ end
 --- @return Netmap rx queue object
 function dev:getRxQueue(id)
 	if not id < self.nmr.nr_rx_rings then
-		print("[ERROR] tx queue id is too high")
+		log:error("[ERROR] tx queue id is too high")
 		return nil
 	end
 	if not self.fd[id] then
@@ -141,6 +145,7 @@ function dev:getRxQueue(id)
 
 	local queue = {}
 	setmetatable(queue, rxQueue)
+	log:debug("getting rx ring now")
 	queue.nmRing = netmapc.NETMAP_RXRING_wrapper(self.nifp[id], id) -- XXX is this correct? (seems to be)
 	-- XXX set metatype?
 	queue.fd = self.fd[id]
