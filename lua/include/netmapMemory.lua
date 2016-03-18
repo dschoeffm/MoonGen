@@ -11,12 +11,17 @@ local log = require "log"
 
 local mod = {}
 
+local mempool = {}
+mempool.__index = mempool
+
+local bufArray = {}
+
+-- local netmapSlot = {}
+-- netmapSlot.__index = netmapSlot
+
 ----------------------------------------------------------------------------------
 ---- Memory Pool (Netmap edition)
 ----------------------------------------------------------------------------------
-
-local mempool = {}
-mempool.__index = mempool
 
 --- Prepares the "Memory Pool" (pre allocated by netmap)
 --- Creates the rte_mbuf array for normal MoonGen usage
@@ -26,7 +31,7 @@ mempool.__index = mempool
 --- @return  A Memory Pool object containing a rte_mbuf array
 function mod.createMemPool(...)
 	local args = {...}
-	if type(args[1]) ~= table then
+	if type(args[1]) ~= "table" then
 		log:fatal("Currently only tables are supported in netmapMemory.createMemPool()")
 		return nil
 	end
@@ -38,17 +43,18 @@ function mod.createMemPool(...)
 	if args.n or args.socket or args.bufSize then
 		log:warn("You set variables intended for DPDK, they are ignored by netmap")
 	end
-	if args.queue.num_slots ~= args.queue.avail() then
+	if args.queue.nmRing.num_slots ~= args.queue.avail() then
 		log:error("Packets left in the ring - probably not what you want")
 		return nil
 	end
 	local mem = {}
 	mem.queue = args.queue
 	log:debug("allocating mbufs now")
-	mem.mbufs = ffi.new("struct rte_mbuf[?]", args.queue.num_slots)
-	for i=0,args.queue.num_slots do
-		mem.mbufs[i].pkt.data = netmapc.NETMAP_BUF_wrapper(mem.queue, i) 
-		mem.mbufs[i].pkt.slot = netmapSlot.create(mem.queue, i) -- XXX do I need this?
+	mem.mbufs = ffi.new("struct rte_mbuf[?]", args.queue.nmRing.num_slots)
+	mem.slots = {}
+	for i=0,args.queue.nmRing.num_slots do
+		mem.mbufs[i].pkt.data = netmapc.NETMAP_BUF_wrapper(mem.queue.nmRing, i) 
+		mem.slots[i] = mem.queue.nmRing.slot[i] -- XXX is this really saving a pointer?
 		setmetatable(mem.mbufs[i], packet) -- XXX is this correct?
 	end
 
@@ -70,7 +76,7 @@ end
 function mempool:bufArray(n)
 	n = n or 63
 	self.batch_size = n
-	if n > self.queue.num_slots then
+	if n > self.queue.nmRing.num_slots then
 		log:fatal("not enough slots in the memory pool / ring - check your config")
 		return nil
 	end
@@ -83,17 +89,14 @@ function mempool:bufArray(n)
 		maxSize = n,
 		array = 0, --TODO where will this be used afterall? (was there with DPDK)
 		mem = self,
-		first = self.queue.head, 
-		last = (self.queue.head + n) % self.queue.num_slots -- XXX if-then-else might be faster
+		first = self.queue.nmRing.head, 
+		last = (self.queue.nmRing.head + n) % self.queue.nmRing.num_slots -- XXX if-then-else might be faster
 	}, bufArray)
 end
 
 ----------------------------------------------------------------------------------
 ---- Buffer Array
 ----------------------------------------------------------------------------------
-
-local bufArray = {}
-bufArray.__index = bufArray
 
 --- Prepare the buffer array with the length of the packets
 --- @param Length of the packets
@@ -104,20 +107,25 @@ function bufArray:alloc(len)
 	while queue:avail() < len do
 		queue:sync()
 	end
-	self.first = queue.head
+	self.first = queue.nmRing.head
 	self.last = self.first + self.size
-	if self.last > queue.num_slots then
-		self.last = self.last - queue.num_slots
+	if self.last > queue.nmRing.num_slots then
+		self.last = self.last - queue.nmRing.num_slots
 	end
 	log:debug("update the length fields")
-	for _, buf in ipairs(self) do
-		buf.len = len -- XXX is this sufficient -> buf.data.data_len, buf.data.pkt_len
-		buf.pkt.slot.len = len
+	--for _, buf in ipairs(self) do -- TODO this needs rework
+	--	buf.len = len -- XXX is this sufficient -> buf.data.data_len, buf.data.pkt_len
+	--	buf.pkt.slot.len = len -- TODO this does not work
+	--end
+	for i=self.first,self.last do
+		local mbuf = self.mem.mbufs[i]
+		mbuf.buf.len = len
+		self.mem.slots[i].len = len
 	end
 end
 
 function bufArray.__index(self, k)
-	local num_slots = self.mem.queue.num_slots
+	local num_slots = self.mem.queue.nmRing.num_slots
 	if not k < num_slots then
 		k = k - num_slots
 	end
@@ -146,6 +154,7 @@ function bufArray:offloadTcpChecksums(ipv4, l2Len, l3Len)
 	-- do nothing for now
 end
 
+--[[ XXX This class might not be of much use XXX
 ----------------------------------------------------------------------------------
 ---- Netmap slots (internal use only)
 ----------------------------------------------------------------------------------
@@ -184,5 +193,5 @@ function netmapSlot:flags(flags)
 end
 
 ffi.metatype("struct netmap_slot", netmapSlot)
-
+--]]
 return mod

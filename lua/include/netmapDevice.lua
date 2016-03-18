@@ -18,6 +18,12 @@ local dev = {}
 dev.__index = dev
 mod.devices = {}
 
+local txQueue = {}
+txQueue.__index = txQueue
+
+local rxQueue = {}
+rxQueue.__index = rxQueue
+
 mod.mmaped = false
 mod.mem = 0
 
@@ -130,6 +136,7 @@ function dev:getTxQueue(id)
 		return nil
 	end
 	if not self.fd[id] then
+		log:info("open netmap device again - file descriptor does not exist yet")
 		openDevice(self, id)
 	end
 
@@ -138,6 +145,7 @@ function dev:getTxQueue(id)
 	log:debug("getting tx ring now")
 	queue.nmRing = netmapc.NETMAP_TXRING_wrapper(self.nifp[id], id) -- XXX is this correct? (seems to be)
 	queue.fd = self.fd[id]
+	return queue
 end
 
 --- Get the rx queue with a certain number
@@ -158,14 +166,12 @@ function dev:getRxQueue(id)
 	queue.nmRing = netmapc.NETMAP_RXRING_wrapper(self.nifp[id], id) -- XXX is this correct? (seems to be)
 	-- XXX set metatype?
 	queue.fd = self.fd[id]
+	return queue
 end
 
 ----------------------------------------------------------------------------------
 ---- Netmap Tx Queue
 ----------------------------------------------------------------------------------
-
-local txQueue = {}
-txQueue.__index = txQueue
 
 --- Sync the SW view with the HW view
 function txQueue:sync()
@@ -175,17 +181,17 @@ end
 --- Send the current buffer
 --- @param bufs: packet buffers to send
 function txQueue:send(bufs)
-    self.head = bufs.last
-    self.cur = self.head
+    self.nmRing.head = bufs.last
+    self.nmRing.cur = self.head
     self.sync()
 end
 
 --- Return how many slots are available to the userspace
 --- @return Number of available buffers
 function txQueue:avail()
-	ret = self.tail - self.cur
+	ret = self.nmRing.tail - self.nmRing.cur
 	if ret < 0 then
-		ret = ret + ring.num_slots
+		ret = ret + ring.nmRing.num_slots
 	end
 	return ret
 	--return netmapc.nm_ring_space(self.c) -- original c call
@@ -196,14 +202,12 @@ function txQueue:setRate(rate)
 	-- is something like this supported at all?
 end
 
--- ffi.metatype("struct netmap_ring*", txQueue) -- XXX needed? Throws an error
+ffi.metatype("struct netmap_ring", txQueue) -- XXX pointer or no pointer
 
 ----------------------------------------------------------------------------------
 ---- Netmap Rx Queue
 ----------------------------------------------------------------------------------
 
-local rxQueue = {}
-rxQueue.__index = rxQueue
 --- TODO
 --ffi.metatype("struct netmap_ring*", rxQueue) -- Throws an error
 
