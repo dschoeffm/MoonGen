@@ -6,7 +6,7 @@ local log 		= require "log"
 local ffi = require "ffi"
 
 function master(txPorts, minIp, numIps, rate)
-	log.level = 0
+	log:setLevel(log.DEBUG)
 	if not txPorts then
 		log:info("usage: txPort1[,txPort2[,...]] [minIP numIPs rate]")
 		return
@@ -32,7 +32,8 @@ function master(txPorts, minIp, numIps, rate)
 end
 
 function loadSlave(port, queue, minA, numIPs)
-	--- parse and check ip addresses
+	log:setLevel(log.DEBUG)
+	-- parse and check ip addresses
 	log:info("started slave on port: " .. port .. " queue: " .. queue)
 	local minIP, ipv4 = parseIPAddress(minA)
 	if minIP then
