@@ -102,6 +102,10 @@ end
 --- @param iface: interface name (eg. eth1)
 --- @return Netmap device object
 function mod.get(iface)
+	if not mmaped then
+		log:warn("get(iface) runs before config(...)")
+		mod.config({port = iface})
+	end
 	local d = mod.devices[iface]
 	if d == nil then
 		log:fatal("tried to get uninitialized device: " .. iface)
