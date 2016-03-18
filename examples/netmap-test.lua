@@ -48,16 +48,19 @@ function loadSlave(port, queue, minA, numIPs)
 	-- continue normally
 	local dev = device.get(port)
 	local queue = dev:getTxQueue(queue)
-	local mem = memory.createMemPool(function(buf)
-		buf:getTcpPacket(ipv4):fill{ 
-			ethSrc="90:e2:ba:2c:cb:02", ethDst="90:e2:ba:35:b5:81", 
-			ip4Dst="192.168.1.1", 
+	memPoolArgs = {}
+	memPoolArgs.queue = queue -- XXX not needed in DPDK
+	memPoolArgs.func = function(buf)
+		buf:getTcpPacket(ipv4):fill{
+			ethSrc="90:e2:ba:2c:cb:02", ethDst="90:e2:ba:35:b5:81",
+			ip4Dst="192.168.1.1",
 			ip6Dst="fd06::1",
 			tcpSyn=1,
 			tcpSeqNumber=1,
 			tcpWindow=10,
 			pktLength=packetLen }
-	end)
+		end
+	local mem = memory.createMemPool(memPoolArgs)
 
 	local bufs = mem:bufArray(128)
 	local counter = 0
