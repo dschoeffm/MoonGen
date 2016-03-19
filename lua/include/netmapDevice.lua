@@ -125,6 +125,12 @@ function dev:wait()
 	-- do nothing for now
 	-- waiting 2 seconds is probably the best we can do
 	-- maybe there is a syscall like "ip l"?
+	ffi.cdef[[
+		int sleep(int seconds);
+	]]
+	log:debug("waiting for 3 seconds")
+	ffi.C.sleep(3)
+	log:debug("finished waiting")
 end
 
 --- Get the tx queue with a certain number
@@ -175,15 +181,18 @@ end
 
 --- Sync the SW view with the HW view
 function txQueue:sync()
-	netmapc.ioctl_NIOCREGIF(self.fd)
+	netmapc.ioctl_NIOCTXSYNC(self.fd)
 end
 
 --- Send the current buffer
 --- @param bufs: packet buffers to send
 function txQueue:send(bufs)
-    self.nmRing.head = bufs.last
-    self.nmRing.cur = self.head
-    self.sync()
+	--log:debug("sending buffer, head = " .. bufs.last)
+	log:debug("Ring: head = " .. self.nmRing.head .. " cur = " .. self.nmRing.cur .. " tail = " .. self.nmRing.tail)
+	log:debug("Buffer: first = " .. bufs.first .. " last = " .. bufs.last)
+	self.nmRing.head = bufs.last
+	self.nmRing.cur = self.nmRing.head
+	self:sync()
 end
 
 --- Return how many slots are available to the userspace
@@ -191,9 +200,9 @@ end
 function txQueue:avail()
 	ret = self.nmRing.tail - self.nmRing.cur
 	if ret < 0 then
-		ret = ret + ring.nmRing.num_slots
+		ret = ret + self.nmRing.num_slots
 	end
-	return ret
+	return ret -1 --TODO test: is this "-1" needed?
 	--return netmapc.nm_ring_space(self.c) -- original c call
 end
 

@@ -6,7 +6,7 @@ local log 		= require "log"
 local ffi = require "ffi"
 
 function master(txPorts, minIp, numIps, rate)
-	log:setLevel(log.DEBUG)
+	--log.level = 0
 	if not txPorts then
 		log:info("usage: txPort1[,txPort2[,...]] [minIP numIPs rate]")
 		return
@@ -28,11 +28,11 @@ function master(txPorts, minIp, numIps, rate)
 
 	--dpdk.waitForSlaves()
 	ffi.cdef[[unsigned int sleep(unsigned int seconds);]]
-	ffi.C.sleep(10)
+	ffi.C.sleep(20)
 end
 
 function loadSlave(port, queue, minA, numIPs)
-	log:setLevel(log.DEBUG)
+	log.level = 0
 	-- parse and check ip addresses
 	log:info("started slave on port: " .. port .. " queue: " .. queue)
 	local minIP, ipv4 = parseIPAddress(minA)
@@ -70,7 +70,10 @@ function loadSlave(port, queue, minA, numIPs)
 	while true do
 		-- fill packets and set their size 
 		bufs:alloc(packetLen)
-		for i, buf in ipairs(bufs) do 			
+		for i, buf in ipairs(bufs) do
+			if buf == nil then
+				log:fatal("buffer was nil")
+			end
 			local pkt = buf:getTcpPacket(ipv4)
 			
 			--increment IP

@@ -15,6 +15,7 @@ local mempool = {}
 mempool.__index = mempool
 
 local bufArray = {}
+bufArray.__index = bufArray
 
 -- local netmapSlot = {}
 -- netmapSlot.__index = netmapSlot
@@ -43,9 +44,8 @@ function mod.createMemPool(...)
 	if args.n or args.socket or args.bufSize then
 		log:warn("You set variables intended for DPDK, they are ignored by netmap")
 	end
-	if args.queue.nmRing.num_slots ~= args.queue.avail() then
-		log:error("Packets left in the ring - probably not what you want")
-		return nil
+	if args.queue.nmRing.num_slots ~= args.queue:avail() then
+		log:warn("Packets left in the ring - probably not what you want")
 	end
 	local mem = {}
 	mem.queue = args.queue
@@ -55,13 +55,13 @@ function mod.createMemPool(...)
 	for i=0,args.queue.nmRing.num_slots do
 		mem.mbufs[i].pkt.data = netmapc.NETMAP_BUF_wrapper(mem.queue.nmRing, i) 
 		mem.slots[i] = mem.queue.nmRing.slot[i] -- XXX is this really saving a pointer?
-		setmetatable(mem.mbufs[i], packet) -- XXX is this correct?
+		--setmetatable(mem.mbufs[i], packet) -- XXX is this correct?
 	end
 
 	if args.func then
 		log:debug("running prepare functions on all mbufs")
-		for buf in mem.mbufs do
-			args.func(buf)
+		for i=0,args.queue.nmRing.num_slots do
+			args.func(mem.mbufs[i])
 		end
 	end
 
@@ -81,6 +81,7 @@ function mempool:bufArray(n)
 		return nil
 	end
 	while self.queue:avail() < n do -- block / busy wait until array size is satisfied
+		log:debug("mempool:bufArray waiting for buffer to be available")
 		self.queue:sync()
 	end
 	log:debug("generating buffer array")
@@ -104,12 +105,14 @@ function bufArray:alloc(len)
 	-- no actual allocation, just update the the length fields
 	-- wait until there is space in the ring
 	local queue = self.mem.queue
-	while queue:avail() < len do
+	log:debug("avail = " .. queue:avail() .. ", len = " .. len)
+	while queue:avail() < self.size do
+		log:debug("bufArray:alloc waiting for buffer to be available")
 		queue:sync()
 	end
 	self.first = queue.nmRing.head
 	self.last = self.first + self.size
-	if self.last > queue.nmRing.num_slots then
+	if not (self.last < queue.nmRing.num_slots) then
 		self.last = self.last - queue.nmRing.num_slots
 	end
 	log:debug("update the length fields")
@@ -117,20 +120,35 @@ function bufArray:alloc(len)
 	--	buf.len = len -- XXX is this sufficient -> buf.data.data_len, buf.data.pkt_len
 	--	buf.pkt.slot.len = len -- TODO this does not work
 	--end
-	for i=self.first,self.last do
+	local b
+	local e
+	if self.first < self.last then
+		b = self.first
+		e = self.last
+	else
+		b = self.last
+		e = self.first
+	end
+	for i=b,e do
 		local mbuf = self.mem.mbufs[i]
-		mbuf.buf.len = len
+		mbuf.pkt.data_len = len
 		self.mem.slots[i].len = len
 	end
+	log:debug("updating finished")
 end
 
+--[[ -- __index is defined like a class
 function bufArray.__index(self, k)
 	local num_slots = self.mem.queue.nmRing.num_slots
-	if not k < num_slots then
+	if type(k) ~= "number" then
+		return nil
+	end
+	if not (k < num_slots) then
 		k = k - num_slots
 	end
-	return type(k) == "number" and self.mem.mbufs[k - 1] or bufArray[k] -- no idea what that or does (copied from DPDK)
+	return self.mem.mbufs[k - 1] or bufArray[k] -- no idea what that or does (copied from DPDK)
 end
+--]]
 
 -- do I need bufArray.__newindex() ?
 
