@@ -30,6 +30,10 @@ int open_wrapper(){
 	return open("/dev/netmap", O_RDWR);
 }
 
+void* mmap_wrapper(uint32_t memsize, int fd){
+	return mmap(0 , memsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+}
+
 int ioctl_NIOCGINFO(int fd, struct nmreq* nmr){
 	return ioctl(fd, NIOCGINFO, nmr);
 }

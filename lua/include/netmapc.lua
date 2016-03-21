@@ -159,15 +159,6 @@ static const uint16_t NR_PTNETMAP_HOST = 0x1000;
 static const uint16_t NR_RX_RINGS_ONLY = 0x2000;
 static const uint16_t NT_TX_RINGS_ONLY = 0x4000;
 static const uint16_t NR_ACCEPT_VNET_HDR = 0x8000;
-
-// extracted from sample program
-/* now done via c libary
-static const unsigned long NIOCGINFO = 3225184657;
-static const unsigned long NIOCREGIF = 3225184658;
-static const unsigned long NIOCTXSYNC = 27028;
-static const unsigned long NIOCRXSYNC = 27029;
-static const unsigned long NIOCCONFIG = 3239078294;
-*/
 ]]
 
 -- functions provided by C libary
@@ -177,48 +168,12 @@ struct netmap_ring* NETMAP_TXRING_wrapper(struct netmap_if* nifp, uint32_t index
 struct netmap_ring* NETMAP_RXRING_wrapper(struct netmap_if* nifp, uint32_t index);
 char* NETMAP_BUF_wrapper(struct netmap_ring* ring, uint32_t index);
 uint64_t NETMAP_BUF_IDX_wrapper(struct netmap_ring* ring, char* buf);
-
 int open_wrapper();
+void* mmap_wrapper(uint32_t memsize, int fd);
 int ioctl_NIOCGINFO(int fd, struct nmreq* nmr);
 int ioctl_NIOCREGIF(int fd, struct nmreq* nmr);
 int ioctl_NIOCTXSYNC(int fd);
 int ioctl_NIOCRXSYNC(int fd);
-
-/*
-struct netmap_if* NETMAP_IF(_base, _ofs);
-struct netmap_ring* NETMAP_TXRING(nifp, index);
-struct netmap_ring* NETMAP_RXRING(nifp, index);
-char* NETMAP_BUF(ring, index);
-uing32_t NETMAP_BUF_IDX(ring, buf);
-*/
 ]]
-
--- functions and constants from the c stdlib and linux
-ffi.cdef[[
-//int open(const char *pathname, int flags, mode_t mode);
-//int ioctl(int fd, unsigned long request, ...);
-void *mmap(void *addr, size_t length, int prot, int flags, int fd, uint64_t offset); // originally off_t
-//int poll(struct pollfd *fds, nfds_t nfds, int timeout);
-
-// from man 2 poll
-struct pollfd {
-	int   fd;         /* file descriptor */
-	short events;     /* requested events */
-	short revents;    /* returned events */
-};
-
-static const int O_RDWR = 00000002; ///usr/include/asm-generic/fcntl.h
-
-// from /usr/include/asm-generic/mman-common.h
-static const int PROT_READ = 0x1;
-static const int PROT_WRITE = 0x2;
-static const int PROT_READ_WRITE = 0x3; // this is my own
-static const int PROT_EXEC = 0x4;
-static const int PROT_SEM = 0x8;
-static const int PROT_NONE = 0x0;
-static const int MAP_SHARED = 0x1;
-static const int MAP_PRIVATE = 0x2;
-]]
-
 
 return ffi.C

@@ -69,7 +69,7 @@ local function openDevice(self, ringid)
 	-- mmap if not happend before
 	if not mod.mmaped then
 		log:debug("memory mapping the DMA region now")
-		mod.mem = netmapc.mmap(nil, nmr[0].nr_memsize, netmapc.PROT_READ_WRITE, netmapc.MAP_SHARED, fd, 0);
+		mod.mem = netmapc.mmap_wrapper(nmr[0].nr_memsize, fd);
 		mod.mmaped = true
 	end
 
