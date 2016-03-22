@@ -174,6 +174,7 @@ int ioctl_NIOCGINFO(int fd, struct nmreq* nmr);
 int ioctl_NIOCREGIF(int fd, struct nmreq* nmr);
 int ioctl_NIOCTXSYNC(int fd);
 int ioctl_NIOCRXSYNC(int fd);
+int get_mac(char* ifname, uint8_t* mac);
 ]]
 
 return ffi.C
