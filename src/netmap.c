@@ -58,6 +58,7 @@ int ioctl_NIOCRXSYNC(int fd){
 int get_mac(char* ifname, uint8_t* mac){ // No BSD
 	struct ifaddrs* ifap;
 	int ret = getifaddrs(&ifap);
+	struct ifaddrs* head = ifap;
 	if(ret != 0){
 		return -1;
 	}
@@ -69,5 +70,6 @@ int get_mac(char* ifname, uint8_t* mac){ // No BSD
 		}
 		ifap = ifap->ifa_next;
 	}
+	freeifaddrs(head);
 	return -1;
 }
