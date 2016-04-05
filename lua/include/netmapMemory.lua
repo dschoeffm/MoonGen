@@ -15,7 +15,6 @@ local mempool = {}
 mempool.__index = mempool
 
 local bufArray = {}
-bufArray.__index = bufArray
 
 -- local netmapSlot = {}
 -- netmapSlot.__index = netmapSlot
@@ -47,25 +46,30 @@ function mod.createMemPool(...)
 	if args.queue.nmRing.num_slots ~= args.queue:avail() then
 		log:warn("Packets left in the ring - probably not what you want")
 	end
+
 	local mem = {}
 	mem.queue = args.queue
-	log:debug("allocating mbufs now")
-	mem.mbufs = ffi.new("struct rte_mbuf[?]", args.queue.nmRing.num_slots)
-	mem.slots = {}
-	for i=0,args.queue.nmRing.num_slots do
-		mem.mbufs[i].pkt.data = netmapc.NETMAP_BUF_wrapper(mem.queue.nmRing, i) 
-		mem.slots[i] = mem.queue.nmRing.slot[i] -- XXX is this really saving a pointer?
-		--setmetatable(mem.mbufs[i], packet) -- XXX is this correct?
+	mem.mbufs = {}
+	--mem.mbufs = netmapc.nm_alloc_mbuf_array(args.queue.nmRing.num_slots) -- does not work yet
+
+	for i=0,args.queue.nmRing.num_slots -1 do
+		mem.mbufs[i] = ffi.new("struct rte_mbuf")
+		local buf_addr = netmapc.NETMAP_BUF_wrapper(mem.queue.nmRing, mem.queue.nmRing.slot[i].buf_idx)
+		mem.mbufs[i].pkt.data = buf_addr
+		mem.mbufs[i].data = buf_addr
+		mem.mbufs[i].pkt.data_len = 1522
+		mem.mbufs[i].pkt.pkt_len = 1522
 	end
 
 	if args.func then
-		log:debug("running prepare functions on all mbufs")
-		for i=0,args.queue.nmRing.num_slots do
+		for i=0,args.queue.nmRing.num_slots -1 do
 			args.func(mem.mbufs[i])
 		end
 	end
 
 	setmetatable(mem, mempool)
+
+	log:debug("return from createMemPool")
 
 	return mem
 end
@@ -75,13 +79,11 @@ end
 --- @return A buffer array object
 function mempool:bufArray(n)
 	n = n or 63
-	self.batch_size = n
 	if n > self.queue.nmRing.num_slots then
 		log:fatal("not enough slots in the memory pool / ring - check your config")
 		return nil
 	end
-	while self.queue:avail() < n do -- block / busy wait until array size is satisfied
-		log:debug("mempool:bufArray waiting for buffer to be available")
+	while self.queue:avail() < n do
 		self.queue:sync()
 	end
 	log:debug("generating buffer array")
@@ -90,6 +92,8 @@ function mempool:bufArray(n)
 		maxSize = n,
 		array = 0, --TODO where will this be used afterall? (was there with DPDK)
 		mem = self,
+		queue = self.queue,
+		numSlots = self.queue.nmRing.num_slots,
 		first = self.queue.nmRing.head, 
 		last = (self.queue.nmRing.head + n) % self.queue.nmRing.num_slots -- XXX if-then-else might be faster
 	}, bufArray)
@@ -104,22 +108,16 @@ end
 function bufArray:alloc(len)
 	-- no actual allocation, just update the the length fields
 	-- wait until there is space in the ring
-	local queue = self.mem.queue
-	log:debug("avail = " .. queue:avail() .. ", len = " .. len)
-	while queue:avail() < self.size do
-		log:debug("bufArray:alloc waiting for buffer to be available")
+	local queue = self.queue
+	while queue:avail() < self.maxSize do
 		queue:sync()
 	end
 	self.first = queue.nmRing.head
-	self.last = self.first + self.size
+	self.last = self.first + self.maxSize
 	if not (self.last < queue.nmRing.num_slots) then
 		self.last = self.last - queue.nmRing.num_slots
 	end
-	log:debug("update the length fields")
-	--for _, buf in ipairs(self) do -- TODO this needs rework
-	--	buf.len = len -- XXX is this sufficient -> buf.data.data_len, buf.data.pkt_len
-	--	buf.pkt.slot.len = len -- TODO this does not work
-	--end
+
 	local b
 	local e
 	if self.first < self.last then
@@ -132,29 +130,42 @@ function bufArray:alloc(len)
 	for i=b,e do
 		local mbuf = self.mem.mbufs[i]
 		mbuf.pkt.data_len = len
-		self.mem.slots[i].len = len
+		mbuf.pkt.pkt_len = len
+		if tonumber(self.queue.nmRing.slot[i].flags) ~= 0 then
+			log:warn("some flag is set on some packet")
+		end
 	end
-	log:debug("updating finished")
 end
 
---[[ -- __index is defined like a class
+
 function bufArray.__index(self, k)
-	local num_slots = self.mem.queue.nmRing.num_slots
-	if type(k) ~= "number" then
-		return nil
-	end
-	if not (k < num_slots) then
-		k = k - num_slots
-	end
-	return self.mem.mbufs[k - 1] or bufArray[k] -- no idea what that or does (copied from DPDK)
+	return type(k) == "number" and self.mem.mbufs[(k+self.first-1)%self.maxSize] or bufArray[k]	
 end
---]]
 
--- do I need bufArray.__newindex() ?
-
-function bufArray._len(self)
+function bufArray.__len(self)
 	return self.size
 end
+
+do
+	local function it(self, i) --TODO modulo wrap around
+		if i+1 == self.numSlots then
+			i = 0
+		end
+		if i == self.last then
+			return nil
+		end
+		return i + 1, self.mem.mbufs[i]
+	end
+
+	function bufArray.__ipairs(self)
+		return it, self, self.first
+	end
+end
+
+function bufArray.__tostring(self)
+	return ("first=" .. self.first .. " last=" .. self.last .. " size=" .. self.size .. " maxSize=" .. self.maxSize)
+end
+
 
 function bufArray:offloadUdpChecksums(ipv4, l2Len, l3Len)
 	-- do nothing for now
@@ -172,44 +183,4 @@ function bufArray:offloadTcpChecksums(ipv4, l2Len, l3Len)
 	-- do nothing for now
 end
 
---[[ XXX This class might not be of much use XXX
-----------------------------------------------------------------------------------
----- Netmap slots (internal use only)
-----------------------------------------------------------------------------------
-local netmapSlot = {}
-netmapSlot.__index = netmapSlot
-
---- Returns a netmap ring object
---- @param ring: a netmap ring
---- @param index: id of the slot
---- @return a netmap slot object
-function netmapSlot:create(ring, index)
-	r = ffi.cast("struct netmap_slot", ring.slot[index])
-	setmetatable(r, self)
-	r.ring = ring -- XXX Do I need this?
-	return r
-end
-
---- Get/Set the length of a packet
---- @param length: length of the packet described in this slot (optional)
---- @return Current value of the length field
-function netmapSlot:len(length)
-	if length ~= nil then
-		self.len = length
-	end
-	return self.len
-end
-
---- Get/Set flags of the packet
---- @param flags: new flags value, replacing the old one (optional)
---- @return Currently set flags
-function netmapSlot:flags(flags)
-	if flags ~= nil then
-		self.flags = flags
-	end
-	return self.flags
-end
-
-ffi.metatype("struct netmap_slot", netmapSlot)
---]]
 return mod

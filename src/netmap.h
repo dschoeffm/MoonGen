@@ -89,23 +89,18 @@ struct netmap_ring* NETMAP_RXRING_wrapper(struct netmap_if* nifp, uint32_t index
 char* NETMAP_BUF_wrapper(struct netmap_ring* ring, uint32_t index);
 char* NETMAP_BUF_smart_wrapper(struct netmap_ring* ring, uint32_t index);
 uint64_t NETMAP_BUF_IDX_wrapper(struct netmap_ring* ring, char* buf);
-int open_wrapper();
-void* mmap_wrapper(uint32_t memsize, int fd);
-void* get_netmap_mmap();
 int ioctl_NIOCGINFO(int fd, struct nmreq* nmr);
 int ioctl_NIOCREGIF(int fd, struct nmreq* nmr);
-int ioctl_NIOCTXSYNC(int fd, struct netmap_ring* nmring);
-int ioctl_NIOCRXSYNC(int fd, struct netmap_ring* nmring);
-int poll_tx(int fd, struct netmap_ring* nmring);
-int poll_rx(int fd, struct netmap_ring* nmring);
-int poll_rx_mbufs(int fd, struct netmap_ring* nmring, struct rte_mbuf* mbufs, int maxSize, struct nm_device* dev);
+int ioctl_NIOCTXSYNC(int fd);
+int ioctl_NIOCRXSYNC(int fd);
+/*
 uint32_t update_tx_pkts_counter(struct nm_device* dev, uint32_t count);
 uint32_t update_rx_pkts_counter(struct nm_device* dev, uint32_t count);
 uint64_t update_tx_octetts_counter(struct nm_device* dev, uint64_t count);
 uint64_t update_rx_octetts_counter(struct nm_device* dev, uint64_t count);
+*/
 int get_mac(char* ifname, uint8_t* mac); // No BSD
-struct rte_mbuf* nm_alloc_mbuf();
-struct rte_mbuf* nm_alloc_mbuf_array(uint32_t num);
+struct rte_mbuf** nm_alloc_mbuf_array(uint32_t num);
 struct nm_device* nm_get(const char port[]);
 static int nm_reopen(uint16_t ringid, struct nm_device* dev);
 struct nm_device* nm_config(struct nm_config_struct* config);

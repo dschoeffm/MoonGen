@@ -24,60 +24,6 @@ txQueue.__index = txQueue
 local rxQueue = {}
 rxQueue.__index = rxQueue
 
-mod.mmaped = false
-mod.mem = 0
-
---- Opens the netmap device (helper function, internal use only)
---- @param self: device object
---- @param ringid: index of the requested ring
-local function openDevice(self, ringid)
-	if not ringid or self.fd[ringid] then
-		log:error("no ringid was given, or ring was opened already")
-		return nil
-	end
-	-- open the netmap control file
-	--local fd = netmapc.open("/dev/netmap", O_RDWR)
-	log:debug("opening /dev/netmap now")
-	local fd = netmapc.open_wrapper()
-	if fd == -1 then
-		log:fatal("Error opening /dev/netmap")
-		return nil
-	end
-
-	-- create request and populate it from the config
-	local nmr = ffi.new("struct nmreq[1]")
-	self.nmr = nmr
-	nmr[0].nr_name = self.iface
-	nmr[0].nr_version = netmapc.NETMAP_API
-	nmr[0].nr_flags = netmapc.NR_REG_ONE_NIC
-	nmr[0].nr_ringid = ringid -- TODO NETMAP_NO_TX_POLL should be set
-	-- not reliably supported anyways
-	--nmr.nr_tx_rings = config.nr_tx_rings
-	--nmr.nr_rx_rings = config.nr_rx_rings
-	--nmr.nr_tx_slots = config.nr_tx_slots
-	--nmr.nr_rx_slots = config.nr_rx_slots
-
-	-- do ioctl to register the device
-	--local ret = netmapc.ioctl(fd, NIOCREGIF, nmr)
-	log:debug("issuing NIOCREGIF now")
-	local ret = netmapc.ioctl_NIOCREGIF(fd, nmr)
-	if ret == -1 then
-		log:fatal("Error issuing NIOCREGIF")
-		return nil
-	end
-
-	-- mmap if not happend before
-	if not mod.mmaped then
-		log:debug("memory mapping the DMA region now")
-		mod.mem = netmapc.mmap_wrapper(nmr[0].nr_memsize, fd);
-		mod.mmaped = true
-	end
-
-	self.mem = mod.mem
-	self.fd[ringid] = fd
-	self.nifp[ringid] = netmapc.NETMAP_IF_wrapper(mod.mem, nmr[0].nr_offset)
-end
-
 --- Configures a device
 --- @param args.port: Interface name (eg. eth1)
 --- @todo there are way more parameters with DPDK
@@ -90,16 +36,24 @@ function mod.config(...)
 	end
 	args = args[1]
 
+	-- set default values
+	args.txQueues = args.txQueues or 1
+	args.rxQueues = args.rxQueues or 1
+
+	local config = ffi.new("struct nm_config_struct[1]")
+	config[0].port = args.port
+	config[0].txQueues = args.txQueues
+	config[0].rxQueues = args.rxQueues
+
 	-- create new device object
 	local dev_ret = {}
 	setmetatable(dev_ret, dev)
-	dev_ret.iface = args.port
-	dev_ret.fd = {}
-	dev_ret.nifp = {}
+	dev_ret.port = args.port
+	dev_ret.c = netmapc.nm_config(config)
 
-	openDevice(dev_ret, 0)
-
-	mod.devices[dev_ret.iface] = dev_ret
+	if dev_ret.c == nil then
+		log:fatal("Something went wrong during netmapc.nm_config")
+	end
 
 	return dev_ret
 end
@@ -107,50 +61,44 @@ end
 --- Get a already configured device
 --- @param iface: interface name (eg. eth1)
 --- @return Netmap device object
-function mod.get(iface)
-	if not mmaped then
-		log:warn("get(iface) runs before config(...)")
-		mod.config({port = iface})
-	end
-	local d = mod.devices[iface]
-	if d == nil then
-		log:fatal("tried to get uninitialized device: " .. iface)
-	end
-	return d
+function mod.get(port)
+	local dev_ret = {}
+	setmetatable(dev_ret, dev)
+	dev_ret.c = netmapc.nm_get(port)
+	dev_ret.port = port
+	return dev_ret
 end
 
 --- Wait for the links to come up
---- Does nothing at the moment
 function dev:wait()
-	-- do nothing for now
-	-- waiting 2 seconds is probably the best we can do
-	-- maybe there is a syscall like "ip l"?
 	ffi.cdef[[
 		int sleep(int seconds);
 	]]
-	log:debug("waiting for 3 seconds")
-	ffi.C.sleep(3)
-	log:debug("finished waiting")
+	ffi.C.sleep(5)
+end
+
+function mod.waitForLinks()
+	ffi.cdef[[
+		int sleep(int seconds);
+	]]
+	ffi.C.sleep(5)
 end
 
 --- Get the tx queue with a certain number
 --- @param id: index of the queue
 --- @return Netmap tx queue object
 function dev:getTxQueue(id)
-	if not (id < self.nmr[0].nr_tx_rings) then
-		log:error("[ERROR] tx queue id is too high")
-		return nil
-	end
-	if not self.fd[id] then
-		log:info("open netmap device again - file descriptor does not exist yet")
-		openDevice(self, id)
+	if tonumber(self.c.fds[id]) == 0 then
+		log:fatal("This queue was not configured")
 	end
 
 	local queue = {}
 	setmetatable(queue, txQueue)
-	log:debug("getting tx ring now")
-	queue.nmRing = netmapc.NETMAP_TXRING_wrapper(self.nifp[id], id) -- XXX is this correct? (seems to be)
-	queue.fd = self.fd[id]
+	queue.nmRing = netmapc.NETMAP_TXRING_wrapper(self.c.nifps[id], id)
+	queue.fd = self.c.fds[id]
+	queue.dev = self
+	queue.id = id
+
 	return queue
 end
 
@@ -158,22 +106,30 @@ end
 --- @param id: index of the queue
 --- @return Netmap rx queue object
 function dev:getRxQueue(id)
-	if not (id < self.nmr[0].nr_rx_rings) then
-		log:error("[ERROR] tx queue id is too high")
-		return nil
-	end
-	if not self.fd[id] then
-		self:openDevice(id)
+	if tonumber(self.c.fds[id]) == 0 then
+		log:fatal("This queue was not configured")
 	end
 
 	local queue = {}
 	setmetatable(queue, rxQueue)
-	log:debug("getting rx ring now")
-	queue.nmRing = netmapc.NETMAP_RXRING_wrapper(self.nifp[id], id) -- XXX is this correct? (seems to be)
-	-- XXX set metatype?
-	queue.fd = self.fd[id]
+	queue.nmRing = netmapc.NETMAP_RXRING_wrapper(self.c.nifps[id], id)
+	queue.fd = self.c.fds[id]
+	queue.dev = self
+	queue.id = id
+
 	return queue
 end
+
+
+function dev:__tostring()
+	return ("[Device: interface=%s]"):format(self.port)
+end
+
+function dev:__serialize()
+	log:debug("dev:__serialize() iface=" .. self.port)
+	return ('local dev= require "netmapDevice" return dev.get(%s)'):format(self.port), true
+end
+
 
 ----------------------------------------------------------------------------------
 ---- Netmap Tx Queue
@@ -187,11 +143,23 @@ end
 --- Send the current buffer
 --- @param bufs: packet buffers to send
 function txQueue:send(bufs)
-	--log:debug("sending buffer, head = " .. bufs.last)
-	log:debug("Ring: head = " .. self.nmRing.head .. " cur = " .. self.nmRing.cur .. " tail = " .. self.nmRing.tail)
-	log:debug("Buffer: first = " .. bufs.first .. " last = " .. bufs.last)
-	self.nmRing.head = bufs.last
-	self.nmRing.cur = self.nmRing.head
+	local b
+	local e
+	if bufs.first < bufs.last then
+		b = bufs.first
+		e = bufs.last
+	else
+		b = bufs.last
+		e = bufs.first
+	end
+	for i=b,e do
+		local mbuf = bufs.mem.mbufs[i]
+		local len = mbuf.pkt.data_len
+		bufs.mem.queue.nmRing[0].slot[i].len = len
+	end
+
+	self.nmRing[0].head = bufs.last
+	self.nmRing[0].cur = self.nmRing[0].head
 	self:sync()
 end
 
@@ -202,8 +170,7 @@ function txQueue:avail()
 	if ret < 0 then
 		ret = ret + self.nmRing.num_slots
 	end
-	return ret -1 --TODO test: is this "-1" needed?
-	--return netmapc.nm_ring_space(self.c) -- original c call
+	return ret
 end
 
 function txQueue:setRate(rate)
@@ -211,7 +178,14 @@ function txQueue:setRate(rate)
 	-- is something like this supported at all?
 end
 
-ffi.metatype("struct netmap_ring", txQueue) -- XXX pointer or no pointer
+function txQueue:__tostring()
+	log:debug("txQueue:__tostring(): self.dev.iface=" .. self.port .. ", id=" .. self.id)
+	return("[TxQueue: interface=%s, ringid=%d"):format(self.dev.port, self.id)
+end
+
+function txQueue:__serialize()
+	return ('local dev = require "netmapDevice" return dev.get("%s"):getTxQueue(%d)'):format(self.dev.port, self.id), true
+end
 
 ----------------------------------------------------------------------------------
 ---- Netmap Rx Queue
