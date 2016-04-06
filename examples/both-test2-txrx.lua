@@ -22,8 +22,8 @@ function master(txPort, rxPort)
 	dpdk.launchLua("counterSlave", rxDev:getRxQueue(0))
 
 	ffi.cdef[[unsigned int sleep(unsigned int seconds);]]
-	--ffi.C.sleep(60)
-	--dpdk.stop()
+	ffi.C.sleep(20)
+	dpdk.stop()
 
 	dpdk.waitForSlaves()
 end
