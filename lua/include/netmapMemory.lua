@@ -50,11 +50,14 @@ function mod.createMemPool(...)
 	local mem = {}
 	mem.queue = args.queue
 	mem.mbufs = {}
-	--mem.mbufs = netmapc.nm_alloc_mbuf_array(args.queue.nmRing.num_slots) -- does not work yet
 
 	for i=0,args.queue.nmRing.num_slots -1 do
 		mem.mbufs[i] = ffi.new("struct rte_mbuf")
-		mem.queue.dev.c.nm_ring[mem.queue.id].mbufs[i] = mem.mbufs[i]
+		if mem.queue.tx then
+			mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_tx[i] = mem.mbufs[i]
+		else
+			mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_rx[i] = mem.mbufs[i]
+		end
 		local buf_addr = netmapc.NETMAP_BUF_wrapper(mem.queue.nmRing, mem.queue.nmRing.slot[i].buf_idx)
 		mem.mbufs[i].pkt.data = buf_addr
 		mem.mbufs[i].data = buf_addr
@@ -88,7 +91,7 @@ function mempool:bufArray(n)
 		self.queue:sync()
 	end
 	log:debug("generating buffer array")
-	return setmetatable({
+	local bufs = {
 		size = n,
 		maxSize = n,
 		array = 0, --TODO where will this be used afterall? (was there with DPDK)
@@ -98,8 +101,10 @@ function mempool:bufArray(n)
 		dev = self.queue.dev,
 		numSlots = self.queue.nmRing.num_slots,
 		first = self.queue.nmRing.head, 
-		last = (self.queue.nmRing.head + n) % self.queue.nmRing.num_slots -- XXX if-then-else might be faster
-	}, bufArray)
+	}
+	self.queue.bufs = bufs
+	setmetatable(bufs, bufArray)
+	return bufs
 end
 
 ----------------------------------------------------------------------------------
@@ -116,14 +121,21 @@ function bufArray:alloc(len)
 		queue:sync()
 	end
 	self.first = queue.nmRing.head
-	self.last = self.first + self.maxSize
-	if not (self.last < queue.nmRing.num_slots) then
-		self.last = self.last - queue.nmRing.num_slots
-	end
 
-	netmapc.mbufs_len_update(self.dev.c, self.queue.id, self.first, self.last, len);
+	netmapc.mbufs_len_update(self.dev.c, self.queue.id, self.first, self.size, len);
 end
 
+function bufArray:freeAll()
+	local newHead = self.first + self.size
+	if newHead >= self.numSlots then
+		newHead = newHead - self.numSlots
+	end
+	if newHead < 0 then
+		log:fatal("tried setting head and cur to value < 0")
+	end
+	self.queue.nmRing.head = newHead
+	self.queue.nmRing.cur = newHead
+end
 
 function bufArray.__index(self, k)
 	if type(k) == "number" then
@@ -147,7 +159,7 @@ do
 		if i+1 == self.numSlots then
 			i = 0
 		end
-		if i == self.last then
+		if i == ((self.first + self.size)%self.numSlots) then
 			return nil
 		end
 		return i + 1, self.mem.mbufs[i]
@@ -159,7 +171,7 @@ do
 end
 
 function bufArray.__tostring(self)
-	return ("first=" .. self.first .. " last=" .. self.last .. " size=" .. self.size .. " maxSize=" .. self.maxSize)
+	return ("first=" .. self.first .. " size=" .. self.size .. " maxSize=" .. self.maxSize)
 end
 
 

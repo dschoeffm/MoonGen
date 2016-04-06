@@ -7,8 +7,17 @@
 local netmapc = require "netmapc"
 local ffi = require "ffi"
 local log = require "log"
+local memory = require "netmapMemory"
 
 local mod = {} -- local module
+
+function mod.nextSlot(cur, numSlots)
+	if (cur+1) == numSlots then
+		return 0
+	else
+		return cur +1
+	end
+end
 
 ----------------------------------------------------------------------------------
 ---- Netmap Device
@@ -98,6 +107,7 @@ function dev:getTxQueue(id)
 	queue.fd = self.c.nm_ring[id].fd
 	queue.dev = self
 	queue.id = id
+	queue.tx = true
 
 	return queue
 end
@@ -112,10 +122,11 @@ function dev:getRxQueue(id)
 
 	local queue = {}
 	setmetatable(queue, rxQueue)
-	queue.nmRing = netmapc.NETMAP_RXRING_wrapper(self.c.nm_ring[i].nifp, id)
-	queue.fd = self.c.nm_ring[i].fd
+	queue.nmRing = netmapc.NETMAP_RXRING_wrapper(self.c.nm_ring[id].nifp, id)
+	queue.fd = self.c.nm_ring[id].fd
 	queue.dev = self
 	queue.id = id
+	queue.tx = false
 
 	return queue
 end
@@ -143,25 +154,20 @@ end
 --- Send the current buffer
 --- @param bufs: packet buffers to send
 function txQueue:send(bufs)
-	local b
-	local e
-	if bufs.first < bufs.last then
-		b = bufs.first
-		e = bufs.last
-	else
-		b = bufs.last
-		e = bufs.first
-	end
-	for i=b,e do
-		local mbuf = bufs.mem.mbufs[i]
+	local cur = bufs.first
+	for i=1,bufs.size do
+		local mbuf = bufs.mem.mbufs[cur]
+		if mbuf == nil then
+			log:fatal("mbuf was nil in txQueue:send(), cur=" .. cur)
+		end
 		local len = mbuf.pkt.data_len
-		self.nmRing.slot[i].len = len
+		self.nmRing.slot[cur].len = len
+		cur = mod.nextSlot(cur, bufs.numSlots)
 	end
 
-	self.nmRing.head = bufs.last
-	self.nmRing.cur = bufs.last
-
-	self.nmRing.slot[bufs.last].flags = 0x0002 -- NS_REPORT
+	self.nmRing.head = cur
+	self.nmRing.cur = cur
+	self.nmRing.slot[cur].flags = 0x0002 -- NS_REPORT
 
 	-- self:sync() -- done in alloc() anyways, very costly
 end
@@ -194,8 +200,51 @@ end
 ---- Netmap Rx Queue
 ----------------------------------------------------------------------------------
 
---- TODO
---ffi.metatype("struct netmap_ring*", rxQueue) -- Throws an error
+function rxQueue:sync()
+	netmapc.ioctl_NIOCRXSYNC(self.fd)
+end
+
+function rxQueue:recv(bufs)
+	self:sync()
+	while self:avail() < 1 do
+		self:sync()
+	end
+	bufs.first = self.nmRing.head
+	if self:avail() < bufs.maxSize then
+		bufs.size = self:avail()
+	else
+		bufs.size = bufs.maxSize
+	end
+	netmapc.mbufs_slots_update(self.dev.c, self.id, bufs.first, bufs.size)
+
+	return bufs.size
+end
+
+function rxQueue:avail()
+	ret = self.nmRing.tail - self.nmRing.cur
+	if ret < 0 then
+		ret = ret + self.nmRing.num_slots
+	end
+	return ret
+end
+
+function rxQueue:bufArray(s)
+	if self.bufs == nil then
+		log:debug("creating new mempool for receiving")
+		local mem = memory.createMemPool({queue = self})
+		self.bufs = mem:bufArray(s)
+	end
+	return self.bufs
+end
+
+function rxQueue:__tostring()
+	log:debug("rxQueue:__tostring(): self.dev.iface=" .. self.port .. ", id=" .. self.id)
+	return("[RxQueue: interface=%s, ringid=%d"):format(self.dev.port, self.id)
+end
+
+function rxQueue:__serialize()
+	return ('local dev = require "netmapDevice" return dev.get("%s"):getRxQueue(%d)'):format(self.dev.port, self.id), true
+end
 
 
 return mod

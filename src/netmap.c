@@ -97,16 +97,32 @@ struct rte_mbuf** nm_alloc_mbuf_array(uint32_t num){
 	return mbufs;
 }
 
-void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t end, uint16_t len){
+void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count, uint16_t len){
 	struct nm_ring* ring = dev->nm_ring[ringid];
-	for(uint32_t i=start; i <= end; i++){
+	struct netmap_ring* nm_ring = NETMAP_TXRING(dev->nm_ring[ringid]->nifp, ringid);
+	for(uint32_t i=0; i < count; i++){
 		// prefetch the next mbuf
-		__builtin_prefetch(&ring->mbufs_tx[i+1]->pkt.data_len, 1, 1);
-		struct netmap_ring* nm_ring = NETMAP_TXRING(dev->nm_ring[ringid]->nifp, ringid);
-		if(unlikely(i == nm_ring->num_slots)) i = 0;
-		ring->mbufs_tx[i]->pkt.pkt_len = len;
-		ring->mbufs_tx[i]->pkt.data_len = len;
-		nm_ring->slot[i].flags = 0;
+		__builtin_prefetch(&ring->mbufs_tx[start+1]->pkt.data_len, 1, 1);
+		__builtin_prefetch(&nm_ring->slot[start+1]);
+		ring->mbufs_tx[start]->pkt.pkt_len = len;
+		ring->mbufs_tx[start]->pkt.data_len = len;
+		nm_ring->slot[start].flags = 0;
+		start = nm_ring_next(nm_ring, start);
+	}
+}
+
+void mbufs_slots_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count){
+	struct nm_ring* ring = dev->nm_ring[ringid];
+	struct netmap_ring* nm_ring = NETMAP_RXRING(dev->nm_ring[ringid]->nifp, ringid);
+	for(uint32_t i=0; i<count; i++){
+		// prefetch the next mbuf and slot
+		__builtin_prefetch(&ring->mbufs_rx[start+1]->pkt.data_len, 1, 1);
+		__builtin_prefetch(&nm_ring->slot[start+1]);
+		uint16_t len = nm_ring->slot[start].len;
+		ring->mbufs_rx[start]->pkt.pkt_len = len;
+		ring->mbufs_rx[start]->pkt.data_len = len;
+		nm_ring->slot[start].flags = 0;
+		start = nm_ring_next(nm_ring, start);
 	}
 }
 

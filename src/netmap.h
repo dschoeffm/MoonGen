@@ -108,7 +108,8 @@ uint64_t update_rx_octetts_counter(struct nm_device* dev, uint64_t count);
 */
 int get_mac(char* ifname, uint8_t* mac); // No BSD
 struct rte_mbuf** nm_alloc_mbuf_array(uint32_t num);
-void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t end, uint16_t len);
+void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count, uint16_t len);
+void mbufs_slots_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count);
 struct nm_device* nm_get(const char port[]);
 static int nm_reopen(uint16_t ringid, struct nm_device* dev);
 struct nm_device* nm_config(struct nm_config_struct* config);
