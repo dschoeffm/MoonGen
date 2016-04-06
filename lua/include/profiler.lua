@@ -16,11 +16,18 @@ function mod.start()
 	end
 end
 
+local function percent(num, total)
+	total = total or #dumps
+	return (math.floor((num / total)*1000)) / 10
+end
+
+
 function mod.stop()
 	profile.stop()
 	local acc = {}
 	local states = {}
-	states["N"] = 0; states["I"] = 0; states["C"] = 0; states["G"] = 0; states["J"] = 0; 
+	states["N"] = 0; states["I"] = 0; states["C"] = 0; states["G"] = 0; states["J"] = 0;
+
 	for i=1,#dumps do
 		states[dumps[i].s] = states[dumps[i].s] + 1
 		if acc[dumps[i].d] == nil then
@@ -32,20 +39,7 @@ function mod.stop()
 			acc[pos].n = acc[pos].n +1
 		end
 	end
-	--[[ sort the other way round
-	for i=1,#acc do
-		local max = 0
-		local maxPos = 0
-		for k, v in ipairs(acc) do
-			if v.n > max then
-				max = v.n
-				maxPos = k
-			end
-		end
-		log:info(("%d: %s"):format(acc[maxPos].n, acc[maxPos].d))
-		acc[maxPos].n = 0
-	end
-	--]]
+
 	for i=1,#acc do
 		local minPos = 0
 		local min = math.huge
@@ -55,18 +49,19 @@ function mod.stop()
 				minPos = k
 			end
 		end
-		local percent = math.floor((acc[minPos].n / #dumps)*100)
-		if percent > 4 then
-			log:info(("%d percent : %s"):format(percent, acc[minPos].d))
+		--local percent = math.floor((acc[minPos].n / #dumps)*100)
+		if percent(acc[minPos].n) > 4 then
+			log:info(percent(acc[minPos].n) .. " percent : " .. acc[minPos].d)
 		end
 		acc[minPos].n = math.huge
 	end
+
 	log:info("Total number of dumps: " .. #dumps .. "\n")
-	log:info("Native / Jitted : " .. math.floor((states["N"] / #dumps)*100))
-	log:info("Interpreted     : " .. math.floor((states["I"] / #dumps)*100))
-	log:info("C Code          : " .. math.floor((states["C"] / #dumps)*100))
-	log:info("Garbage Collect.: " .. math.floor((states["G"] / #dumps)*100))
-	log:info("JIT Compiler    : " .. math.floor((states["J"] / #dumps)*100))
+	log:info("Native / Jitted : " .. percent(states["N"]))
+	log:info("Interpreted     : " .. percent(states["I"]))
+	log:info("C Code          : " .. percent(states["C"]))
+	log:info("Garbage Collect.: " .. percent(states["G"]))
+	log:info("JIT Compiler    : " .. percent(states["J"]))
 end
 
 return mod
