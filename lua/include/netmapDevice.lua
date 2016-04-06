@@ -88,14 +88,14 @@ end
 --- @param id: index of the queue
 --- @return Netmap tx queue object
 function dev:getTxQueue(id)
-	if tonumber(self.c.fds[id]) == 0 then
+	if tonumber(self.c.nm_ring[id].fd) == 0 then
 		log:fatal("This queue was not configured")
 	end
 
 	local queue = {}
 	setmetatable(queue, txQueue)
-	queue.nmRing = netmapc.NETMAP_TXRING_wrapper(self.c.nifps[id], id)
-	queue.fd = self.c.fds[id]
+	queue.nmRing = netmapc.NETMAP_TXRING_wrapper(self.c.nm_ring[id].nifp, id)
+	queue.fd = self.c.nm_ring[id].fd
 	queue.dev = self
 	queue.id = id
 
@@ -106,14 +106,14 @@ end
 --- @param id: index of the queue
 --- @return Netmap rx queue object
 function dev:getRxQueue(id)
-	if tonumber(self.c.fds[id]) == 0 then
+	if tonumber(self.c.nm_ring[id].fd) == 0 then
 		log:fatal("This queue was not configured")
 	end
 
 	local queue = {}
 	setmetatable(queue, rxQueue)
-	queue.nmRing = netmapc.NETMAP_RXRING_wrapper(self.c.nifps[id], id)
-	queue.fd = self.c.fds[id]
+	queue.nmRing = netmapc.NETMAP_RXRING_wrapper(self.c.nm_ring[i].nifp, id)
+	queue.fd = self.c.nm_ring[i].fd
 	queue.dev = self
 	queue.id = id
 
@@ -155,12 +155,15 @@ function txQueue:send(bufs)
 	for i=b,e do
 		local mbuf = bufs.mem.mbufs[i]
 		local len = mbuf.pkt.data_len
-		bufs.mem.queue.nmRing[0].slot[i].len = len
+		self.nmRing.slot[i].len = len
 	end
 
-	self.nmRing[0].head = bufs.last
-	self.nmRing[0].cur = self.nmRing[0].head
-	self:sync()
+	self.nmRing.head = bufs.last
+	self.nmRing.cur = bufs.last
+
+	self.nmRing.slot[bufs.last].flags = 0x0002 -- NS_REPORT
+
+	-- self:sync() -- done in alloc() anyways, very costly
 end
 
 --- Return how many slots are available to the userspace

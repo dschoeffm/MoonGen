@@ -54,6 +54,7 @@ function mod.createMemPool(...)
 
 	for i=0,args.queue.nmRing.num_slots -1 do
 		mem.mbufs[i] = ffi.new("struct rte_mbuf")
+		mem.queue.dev.c.nm_ring[mem.queue.id].mbufs[i] = mem.mbufs[i]
 		local buf_addr = netmapc.NETMAP_BUF_wrapper(mem.queue.nmRing, mem.queue.nmRing.slot[i].buf_idx)
 		mem.mbufs[i].pkt.data = buf_addr
 		mem.mbufs[i].data = buf_addr
@@ -92,7 +93,9 @@ function mempool:bufArray(n)
 		maxSize = n,
 		array = 0, --TODO where will this be used afterall? (was there with DPDK)
 		mem = self,
+		mbufs = self.mbufs,
 		queue = self.queue,
+		dev = self.queue.dev,
 		numSlots = self.queue.nmRing.num_slots,
 		first = self.queue.nmRing.head, 
 		last = (self.queue.nmRing.head + n) % self.queue.nmRing.num_slots -- XXX if-then-else might be faster
@@ -118,28 +121,21 @@ function bufArray:alloc(len)
 		self.last = self.last - queue.nmRing.num_slots
 	end
 
-	local b
-	local e
-	if self.first < self.last then
-		b = self.first
-		e = self.last
-	else
-		b = self.last
-		e = self.first
-	end
-	for i=b,e do
-		local mbuf = self.mem.mbufs[i]
-		mbuf.pkt.data_len = len
-		mbuf.pkt.pkt_len = len
-		if tonumber(self.queue.nmRing.slot[i].flags) ~= 0 then
-			log:warn("some flag is set on some packet")
-		end
-	end
+	netmapc.mbufs_len_update(self.dev.c, self.queue.id, self.first, self.last, len);
 end
 
 
 function bufArray.__index(self, k)
-	return type(k) == "number" and self.mem.mbufs[(k+self.first-1)%self.maxSize] or bufArray[k]	
+	if type(k) == "number" then
+		if k + self.first -1 == self.numSlots then
+			return self.mbufs[0]
+		end
+		return self.mbufs[k]
+	else
+		return bufArray[k]
+	end
+	-- too slow
+	--return type(k) == "number" and self.mem.mbufs[(k+self.first-1)%self.maxSize] or bufArray[k]
 end
 
 function bufArray.__len(self)

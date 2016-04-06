@@ -97,6 +97,19 @@ struct rte_mbuf** nm_alloc_mbuf_array(uint32_t num){
 	return mbufs;
 }
 
+void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t end, uint16_t len){
+	struct nm_ring* ring = dev->nm_ring[ringid];
+	for(uint32_t i=start; i <= end; i++){
+		// prefetch the next mbuf
+		__builtin_prefetch(&ring->mbufs_tx[i+1]->pkt.data_len, 1, 1);
+		struct netmap_ring* nm_ring = NETMAP_TXRING(dev->nm_ring[ringid]->nifp, ringid);
+		if(unlikely(i == nm_ring->num_slots)) i = 0;
+		ring->mbufs_tx[i]->pkt.pkt_len = len;
+		ring->mbufs_tx[i]->pkt.data_len = len;
+		nm_ring->slot[i].flags = 0;
+	}
+}
+
 struct nm_device* nm_get(const char port[]){
 	for(int i=0; i<nm_devs.num_devs; i++){
 		if(strncmp(port, nm_devs.dev[i]->nmr.nr_name, 16) == 0){
@@ -139,8 +152,8 @@ static int nm_reopen(uint16_t ringid, struct nm_device* dev){
 		netmap_mmap = mmap(NULL , nmr.nr_memsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	}
 
-	dev->fds[ringid] = fd;
-	dev->nifps[ringid] = NETMAP_IF(netmap_mmap, nmr.nr_offset);
+	dev->nm_ring[ringid]->fd = fd;
+	dev->nm_ring[ringid]->nifp = NETMAP_IF(netmap_mmap, nmr.nr_offset);
 
 	return 0;
 }
@@ -165,7 +178,18 @@ struct nm_device* nm_config(struct nm_config_struct* config){
 	nmr->nr_tx_rings = config->txQueues;
 	nmr->nr_rx_rings = config->rxQueues;
 
-	for(int i=0; i<config->rxQueues; i++){
+	int queues = 0;
+	if(nmr->nr_tx_rings > nmr->nr_rx_rings){
+		queues = nmr->nr_tx_rings;
+	} else{
+		queues = nmr->nr_rx_rings;
+	}
+
+	for(int i=0; i < queues; i++){
+		dev->nm_ring[i] = (struct nm_ring*) malloc(sizeof(struct nm_ring));
+	}
+
+	for(int i=0; i < queues; i++){
 		if(nm_reopen(i, dev) == -1){
 			printf("nm_config(): error opening interface \"%s\", ring %d\n", config->port, i);
 			return NULL;

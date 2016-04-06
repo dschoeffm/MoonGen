@@ -164,13 +164,19 @@ static const uint16_t NR_ACCEPT_VNET_HDR = 0x8000;
 -- functions provided by C libary
 ffi.cdef[[
 struct nm_device{
-	int fds[64];
-	struct netmap_if* nifps[64];
+	struct nm_ring* nm_ring[64];
 	struct nmreq nmr;
 	uint32_t tx_pkts;
 	uint32_t rx_pkts;
 	uint64_t tx_octetts;
 	uint64_t rx_octetts;
+};
+
+struct nm_ring{
+	int fd;
+	struct netmap_if* nifp;
+	struct rte_mbuf* mbufs[2048];
+	struct nm_device* dev;
 };
 
 struct nm_config_struct{
@@ -192,6 +198,7 @@ int ioctl_NIOCTXSYNC(int fd);
 int ioctl_NIOCRXSYNC(int fd);
 int get_mac(char* ifname, uint8_t* mac);
 struct rte_mbuf** nm_alloc_mbuf_array(uint32_t num);
+void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t end, uint16_t len);
 struct nm_device* nm_get(const char port[]);
 static int nm_reopen(uint16_t ringid, struct nm_device* dev);
 struct nm_device* nm_config(struct nm_config_struct* config);
