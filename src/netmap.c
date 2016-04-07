@@ -114,6 +114,7 @@ void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, ui
 void mbufs_slots_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count){
 	struct nm_ring* ring = dev->nm_ring[ringid];
 	struct netmap_ring* nm_ring = NETMAP_RXRING(dev->nm_ring[ringid]->nifp, ringid);
+	__atomic_add_fetch (&dev->rx_pkts, count, __ATOMIC_RELAXED);
 	for(uint32_t i=0; i<count; i++){
 		// prefetch the next mbuf and slot
 		__builtin_prefetch(&ring->mbufs_rx[start+1]->pkt.data_len, 1, 1);
@@ -122,8 +123,40 @@ void mbufs_slots_update(struct nm_device* dev, uint16_t ringid, uint32_t start, 
 		ring->mbufs_rx[start]->pkt.pkt_len = len;
 		ring->mbufs_rx[start]->pkt.data_len = len;
 		nm_ring->slot[start].flags = 0;
+		__atomic_add_fetch (&dev->rx_octetts, (uint64_t) len, __ATOMIC_RELAXED);
 		start = nm_ring_next(nm_ring, start);
 	}
+}
+
+void slot_mbuf_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count){
+	struct nm_ring* ring = dev->nm_ring[ringid];
+	struct netmap_ring* nm_ring = NETMAP_TXRING(dev->nm_ring[ringid]->nifp, ringid);
+	__atomic_add_fetch (&dev->tx_pkts, count, __ATOMIC_RELAXED);
+	for(uint32_t i=0; i<count; i++){
+		// prefetch the next mbuf and slot
+		__builtin_prefetch(&ring->mbufs_rx[start+1]->pkt.data_len, 1, 1);
+		__builtin_prefetch(&nm_ring->slot[start+1]);
+		uint16_t len = ring->mbufs_tx[start]->pkt.data_len;
+		nm_ring->slot[start].len = len;
+		__atomic_add_fetch (&dev->tx_octetts, (uint64_t) len, __ATOMIC_RELAXED);
+		start = nm_ring_next(nm_ring, start);
+	}
+	nm_ring->head = start;
+	nm_ring->cur = start;
+	nm_ring->slot[start].flags = NS_REPORT;
+}
+
+uint32_t fetch_tx_pkts(struct nm_device* dev){
+	return __atomic_fetch_and(&dev->tx_pkts, 0x0, __ATOMIC_RELAXED);
+}
+uint32_t fetch_rx_pkts(struct nm_device* dev){
+	return __atomic_fetch_and(&dev->rx_pkts, 0x0, __ATOMIC_RELAXED);
+}
+uint64_t fetch_tx_octetts(struct nm_device* dev){
+	return __atomic_fetch_and(&dev->tx_octetts, 0x0, __ATOMIC_RELAXED);
+}
+uint64_t fetch_rx_octetts(struct nm_device* dev){
+	return __atomic_fetch_and(&dev->rx_octetts, 0x0, __ATOMIC_RELAXED);
 }
 
 struct nm_device* nm_get(const char port[]){

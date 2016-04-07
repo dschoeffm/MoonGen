@@ -141,6 +141,13 @@ function dev:getRxQueue(id)
 	return queue
 end
 
+function dev:getTxStats()
+	return tonumber(netmapc.fetch_tx_pkts(self.c)), tonumber(netmapc.fetch_tx_octetts(self.c))
+end
+
+function dev:getRxStats()
+	return tonumber(netmapc.fetch_rx_pkts(self.c)), tonumber(netmapc.fetch_rx_octetts(self.c))
+end
 
 function dev:__tostring()
 	return ("[Device: interface=%s]"):format(self.port)
@@ -165,21 +172,9 @@ end
 --- @param bufs: packet buffers to send
 function txQueue:send(bufs)
 	local cur = bufs.first
-	for i=1,bufs.size do
-		local mbuf = bufs.mem.mbufs[cur]
-		if mbuf == nil then
-			log:fatal("mbuf was nil in txQueue:send(), cur=" .. cur)
-		end
-		local len = mbuf.pkt.data_len
-		self.nmRing.slot[cur].len = len
-		cur = mod.nextSlot(cur, bufs.numSlots)
-	end
-
-	self.nmRing.head = cur
-	self.nmRing.cur = cur
-	self.nmRing.slot[cur].flags = 0x0002 -- NS_REPORT
-
-	-- self:sync() -- done in alloc() anyways, very costly
+	netmapc.slot_mbuf_update(self.dev.c, self.id, bufs.first, bufs.size);
+	-- syncing and actually sending out packets is too costly
+	-- done in alloc of bufArray...
 end
 
 --- Return how many slots are available to the userspace

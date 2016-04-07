@@ -110,6 +110,11 @@ int get_mac(char* ifname, uint8_t* mac); // No BSD
 struct rte_mbuf** nm_alloc_mbuf_array(uint32_t num);
 void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count, uint16_t len);
 void mbufs_slots_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count);
+void slot_mbuf_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count);
+uint32_t fetch_tx_pkts(struct nm_device* dev);
+uint32_t fetch_rx_pkts(struct nm_device* dev);
+uint64_t fetch_tx_octetts(struct nm_device* dev);
+uint64_t fetch_rx_octetts(struct nm_device* dev);
 struct nm_device* nm_get(const char port[]);
 static int nm_reopen(uint16_t ringid, struct nm_device* dev);
 struct nm_device* nm_config(struct nm_config_struct* config);

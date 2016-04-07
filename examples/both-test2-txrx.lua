@@ -51,7 +51,7 @@ function loadSlave(queue)
 		end
 	local mem = nmMemory.createMemPool(memPoolArgs)
 
-	local bufs = mem:bufArray(48)
+	local bufs = mem:bufArray(128)
 	local counter = 0
 	local c = 0
 
