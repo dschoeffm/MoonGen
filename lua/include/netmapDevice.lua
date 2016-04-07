@@ -8,6 +8,7 @@ local netmapc = require "netmapc"
 local ffi = require "ffi"
 local log = require "log"
 local memory = require "netmapMemory"
+local ethtool = require "netmapEthtool"
 
 local mod = {} -- local module
 
@@ -54,6 +55,11 @@ function mod.config(...)
 	config[0].txQueues = args.txQueues
 	config[0].rxQueues = args.rxQueues
 
+	ethtool.setRingCount(args.port, math.max(args.txQueues, args.rxQueues))
+	ethtool.setRingSize(args.port, 2048) -- smaller does not make a lot of sense
+	ethtool.setLinkUp(args.port)
+	ethtool.waitForLink(args.port)
+
 	-- create new device object
 	local dev_ret = {}
 	setmetatable(dev_ret, dev)
@@ -80,17 +86,21 @@ end
 
 --- Wait for the links to come up
 function dev:wait()
-	ffi.cdef[[
-		int sleep(int seconds);
-	]]
-	ffi.C.sleep(5)
+	-- waiting is already done in mod.config()
+	return
+	--ffi.cdef[[
+	--	int sleep(int seconds);
+	--]]
+	--ffi.C.sleep(5)
 end
 
 function mod.waitForLinks()
-	ffi.cdef[[
-		int sleep(int seconds);
-	]]
-	ffi.C.sleep(5)
+	-- waiting is already done in mod.config()
+	return
+	--ffi.cdef[[
+	--	int sleep(int seconds);
+	--]]
+	--ffi.C.sleep(5)
 end
 
 --- Get the tx queue with a certain number
