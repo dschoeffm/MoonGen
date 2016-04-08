@@ -69,7 +69,8 @@ int ioctl_NIOCRXSYNC(int fd){
 	return ioctl(fd, NIOCRXSYNC);
 }
 
-int get_mac(char* ifname, uint8_t* mac){ // No BSD
+int get_mac(char* ifname, char* mac){ // No BSD
+	uint8_t raw[6] = {0};
 	struct ifaddrs* ifap;
 	int ret = getifaddrs(&ifap);
 	struct ifaddrs* head = ifap;
@@ -79,7 +80,9 @@ int get_mac(char* ifname, uint8_t* mac){ // No BSD
 	while(ifap != NULL){
 		if(strncmp(ifname, ifap->ifa_name, 16) == 0){
 			struct sockaddr_ll* ll = (struct sockaddr_ll*) ifap->ifa_addr;
-			memcpy(mac, ll->sll_addr, 6);
+			memcpy(raw, ll->sll_addr, 6);
+			sprintf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
+					raw[0], raw[1], raw[2], raw[3], raw[4], raw[5]);
 			return 0;
 		}
 		ifap = ifap->ifa_next;

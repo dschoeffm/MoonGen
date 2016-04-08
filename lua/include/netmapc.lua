@@ -197,7 +197,7 @@ int ioctl_NIOCGINFO(int fd, struct nmreq* nmr);
 int ioctl_NIOCREGIF(int fd, struct nmreq* nmr);
 int ioctl_NIOCTXSYNC(int fd);
 int ioctl_NIOCRXSYNC(int fd);
-int get_mac(char* ifname, uint8_t* mac);
+int get_mac(char* ifname, char* mac);
 struct rte_mbuf** nm_alloc_mbuf_array(uint32_t num);
 void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count, uint16_t len);
 void mbufs_slots_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count);

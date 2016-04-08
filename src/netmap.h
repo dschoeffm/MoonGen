@@ -106,7 +106,7 @@ uint32_t update_rx_pkts_counter(struct nm_device* dev, uint32_t count);
 uint64_t update_tx_octetts_counter(struct nm_device* dev, uint64_t count);
 uint64_t update_rx_octetts_counter(struct nm_device* dev, uint64_t count);
 */
-int get_mac(char* ifname, uint8_t* mac); // No BSD
+int get_mac(char* ifname, char* mac); // No BSD
 struct rte_mbuf** nm_alloc_mbuf_array(uint32_t num);
 void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count, uint16_t len);
 void mbufs_slots_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count);

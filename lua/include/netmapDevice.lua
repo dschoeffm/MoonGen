@@ -141,6 +141,17 @@ function dev:getRxQueue(id)
 	return queue
 end
 
+function dev:getMacString()
+	local mac = ffi.new("char[18]")
+	local interfaceName = ffi.new("char[17]")
+	ffi.copy(interfaceName, self.port)
+	local ret = netmapc.get_mac(interfaceName, mac)
+	if ret ~= 0 then
+		log:fatal("something went wrong in dev:getMacString()")
+	end
+	return ffi.string(mac)
+end
+
 function dev:getTxStats()
 	return tonumber(netmapc.fetch_tx_pkts(self.c)), tonumber(netmapc.fetch_tx_octetts(self.c))
 end
