@@ -52,17 +52,11 @@ function mod.createMemPool(...)
 	mem.mbufs = {}
 
 	for i=0,args.queue.nmRing.num_slots -1 do
-		mem.mbufs[i] = ffi.new("struct rte_mbuf")
 		if mem.queue.tx then
-			mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_tx[i] = mem.mbufs[i]
+			mem.mbufs[i] = mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_tx[i]
 		else
-			mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_rx[i] = mem.mbufs[i]
+			mem.mbufs[i] = mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_rx[i]
 		end
-		local buf_addr = netmapc.NETMAP_BUF_wrapper(mem.queue.nmRing, mem.queue.nmRing.slot[i].buf_idx)
-		mem.mbufs[i].pkt.data = buf_addr
-		mem.mbufs[i].data = buf_addr
-		mem.mbufs[i].pkt.data_len = 1522
-		mem.mbufs[i].pkt.pkt_len = 1522
 	end
 
 	if args.func then
