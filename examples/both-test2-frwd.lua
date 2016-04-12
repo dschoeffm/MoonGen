@@ -52,7 +52,7 @@ function futSlave(tx, rx)
 	log:info("counterSlave exits")
 end
 
-function loadSlave(tx)
+function loadSlave(queue)
 	--wait for the rx slave to be initialized for sure
 	ffi.cdef[[int sleep(int sec);]]
 	ffi.C.sleep(3)
