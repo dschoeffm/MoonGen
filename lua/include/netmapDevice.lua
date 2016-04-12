@@ -83,7 +83,7 @@ function mod.config(...)
 			buf.pkt.pkt_len = 1522
 		end
 	end
-	for i=0, args.rxQueues do
+	for q=0, args.rxQueues do
 		local queue = dev_ret:getRxQueue(i)
 		for i=0,queue.nmRing.num_slots -1 do
 			buf = ffi.new("struct rte_mbuf")
