@@ -71,11 +71,11 @@ function mod.config(...)
 	end
 
 	-- create the mempools for the queues now (they need one anyways)
-	for i=0, args.txQueues do
+	for q=0, args.txQueues do
 		local queue = dev_ret:getTxQueue(i)
 		for i=0,queue.nmRing.num_slots -1 do
 			local buf = ffi.new("struct rte_mbuf")
-			dev_ret.c.nm_ring[mem.queue.id].mbufs_tx[i] = buf
+			dev_ret.c.nm_ring[q].mbufs_tx[i] = buf
 			local buf_addr = netmapc.NETMAP_BUF_wrapper(queue.nmRing, queue.nmRing.slot[i].buf_idx)
 			buf.pkt.data = buf_addr
 			buf.data = buf_addr
@@ -87,7 +87,7 @@ function mod.config(...)
 		local queue = dev_ret:getRxQueue(i)
 		for i=0,queue.nmRing.num_slots -1 do
 			buf = ffi.new("struct rte_mbuf")
-			dev_ret.c.nm_ring[mem.queue.id].mbufs_rx[i] = buf
+			dev_ret.c.nm_ring[q].mbufs_rx[i] = buf
 			local buf_addr = netmapc.NETMAP_BUF_wrapper(queue.nmRing, queue.nmRing.slot[i].buf_idx)
 			buf.pkt.data = buf_addr
 			buf.data = buf_addr
