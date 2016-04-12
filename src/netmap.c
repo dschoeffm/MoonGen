@@ -150,6 +150,9 @@ void slot_mbuf_update(struct nm_device* dev, uint16_t ringid, uint32_t start, ui
 }
 
 void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm_device* rxDev, uint16_t rxId){
+	//debug output
+	printf("count=%d, txDev=%p, txId=%d, rxDev=%p, rxid=%d\n", count, txDev, txId, rxDev, rxId);
+
 	struct netmap_ring* txRing = NETMAP_TXRING(txDev->nm_ring[txId]->nifp, txId);
 	struct netmap_ring* rxRing = NETMAP_TXRING(rxDev->nm_ring[rxId]->nifp, rxId);
 	uint32_t txStart = txRing->head;
