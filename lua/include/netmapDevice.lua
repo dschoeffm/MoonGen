@@ -70,16 +70,25 @@ function mod.config(...)
 		log:fatal("Something went wrong during netmapc.nm_config")
 	end
 
+	log:info("1")
 	-- create the mempools for the queues now (they need one anyways)
 	for q=0, args.txQueues do
 		local queue = dev_ret:getTxQueue(q)
+		log:info("2")
 		for i=0,queue.nmRing.num_slots -1 do
+			log:info("3")
 			local buf = ffi.new("struct rte_mbuf")
+			log:info("4")
 			dev_ret.c.nm_ring[q].mbufs_tx[i] = buf
+			log:info("5")
 			local buf_addr = netmapc.NETMAP_BUF_wrapper(queue.nmRing, queue.nmRing.slot[i].buf_idx)
+			log:info("6")
 			buf.pkt.data = buf_addr
+			log:info("7")
 			buf.data = buf_addr
+			log:info("8")
 			buf.pkt.data_len = 1522
+			log:info("9")
 			buf.pkt.pkt_len = 1522
 		end
 	end
