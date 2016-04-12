@@ -166,9 +166,10 @@ void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm
 		rxRing->slot[rxStart].buf_idx = swapBuf;
 
 		// update addresses in mbufs
-		struct nm_ring* p1 = txDev->nm_ring[txId];
-		printf("p1=%p\n", p1);
-		void* txData = p1->mbufs_tx[txStart]->data;
+		printf("txStart=%d\n", txStart);
+		printf("%p\n", txDev->nm_ring[txId]);
+		printf("%p\n", txDev->nm_ring[txId]->mbufs_tx[txStart]);
+		void* txData = txDev->nm_ring[txId]->mbufs_tx[txStart]->data;
 		void* rxData = rxDev->nm_ring[rxId]->mbufs_tx[rxStart]->data;
 		txDev->nm_ring[txId]->mbufs_tx[txStart]->data = rxData;
 		txDev->nm_ring[txId]->mbufs_tx[txStart]->pkt.data = rxData;
