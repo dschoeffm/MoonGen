@@ -91,6 +91,7 @@ function mod.config(...)
 			log:info("9")
 			buf.pkt.pkt_len = 1522
 		end
+		log:info("10")
 	end
 	for q=0, args.rxQueues do
 		local queue = dev_ret:getRxQueue(q)
