@@ -40,7 +40,7 @@ function futSlave(tx, rx)
 		local rx = rx:recv(bufs)
 		for i = 1, rx do
 			local buf = bufs[i]
-			local pkt = buf:fetUdpPacket(ipv4)
+			local pkt = buf:getUdpPacket(ipv4)
 			pkt.eth:setSrcString("a0:36:9f:3b:71:d8")
 			pkt.eth:setDstString("A0:36:9F:3B:71:DA")
 			rxCtr:countPacket(buf)
