@@ -37,7 +37,7 @@ function futSlave(tx, rx)
 	local rxCtr = stats:newPktRxCounter("futSlave", "plain")
 	p.start()
 	while dpdk.running() do
-		local rx = queue:recv(bufs)
+		local rx = rx:recv(bufs)
 		for i = 1, rx do
 			local buf = bufs[i]
 			buf.eth:setSrcString("a0:36:9f:3b:71:d8")
