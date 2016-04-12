@@ -182,6 +182,16 @@ end
 --- Send the current buffer
 --- @param bufs: packet buffers to send
 function txQueue:send(bufs)
+	if bufs.queue.tx == false then -- we are currently forwarding a packet
+		-- swap all the indices and mbuf data pointers
+		-- probably a C job
+		while bufs.size > self:avail() do
+			self:sync()
+		end
+		netmapc.swap_bufs(bufs.size, self.dev.c, self.id, bufs.queue.dev.c, bufs.queue.id)
+		self:sync()
+		return -- do not commence beyond the if
+	end
 	local cur = bufs.first
 	netmapc.slot_mbuf_update(self.dev.c, self.id, bufs.first, bufs.size);
 	-- syncing and actually sending out packets is too costly

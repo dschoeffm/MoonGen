@@ -111,6 +111,7 @@ struct rte_mbuf** nm_alloc_mbuf_array(uint32_t num);
 void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count, uint16_t len);
 void mbufs_slots_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count);
 void slot_mbuf_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count);
+void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm_device* rxDev, uint16_t rxId);
 uint32_t fetch_tx_pkts(struct nm_device* dev);
 uint32_t fetch_rx_pkts(struct nm_device* dev);
 uint64_t fetch_tx_octetts(struct nm_device* dev);
