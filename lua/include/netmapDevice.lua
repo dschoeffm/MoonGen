@@ -95,15 +95,24 @@ function mod.config(...)
 	end
 	for q=0, args.rxQueues do
 		local queue = dev_ret:getRxQueue(q)
+		log:info("12")
 		for i=0,queue.nmRing.num_slots -1 do
+			log:info("13")
 			buf = ffi.new("struct rte_mbuf")
+			log:info("14")
 			dev_ret.c.nm_ring[q].mbufs_rx[i] = buf
+			log:info("15")
 			local buf_addr = netmapc.NETMAP_BUF_wrapper(queue.nmRing, queue.nmRing.slot[i].buf_idx)
+			log:info("16")
 			buf.pkt.data = buf_addr
+			log:info("17")
 			buf.data = buf_addr
+			log:info("18")
 			buf.pkt.data_len = 1522
+			log:info("19")
 			buf.pkt.pkt_len = 1522
 		end
+		log:info("20")
 	end
 
 	return dev_ret
