@@ -72,7 +72,7 @@ function mod.config(...)
 
 	-- create the mempools for the queues now (they need one anyways)
 	for q=0, args.txQueues do
-		local queue = dev_ret:getTxQueue(i)
+		local queue = dev_ret:getTxQueue(q)
 		for i=0,queue.nmRing.num_slots -1 do
 			local buf = ffi.new("struct rte_mbuf")
 			dev_ret.c.nm_ring[q].mbufs_tx[i] = buf
@@ -84,7 +84,7 @@ function mod.config(...)
 		end
 	end
 	for q=0, args.rxQueues do
-		local queue = dev_ret:getRxQueue(i)
+		local queue = dev_ret:getRxQueue(q)
 		for i=0,queue.nmRing.num_slots -1 do
 			buf = ffi.new("struct rte_mbuf")
 			dev_ret.c.nm_ring[q].mbufs_rx[i] = buf
