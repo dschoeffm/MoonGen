@@ -94,6 +94,7 @@ function mod.config(...)
 		log:info("10")
 	end
 	log:info("11")
+	ffi.sleep(1)
 	for q=0, args.rxQueues do
 		local queue = dev_ret:getRxQueue(q)
 		log:info("12")
