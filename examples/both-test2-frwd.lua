@@ -39,7 +39,7 @@ function futSlave(tx, rx)
 	while dpdk.running() do
 		local rx = rx:recv(bufs)
 		log:info("1")
-		for i = 1, rx do
+		for i = 1, rx-1 do
 			local buf = bufs[i]
 			local pkt = buf:getUdpPacket(ipv4)
 			log:info("2")
