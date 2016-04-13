@@ -43,9 +43,9 @@ function futSlave(tx, rx)
 			local buf = bufs[i]
 			log:info("packet: " .. i .. ", rx: " .. rx)
 			if buf.data == nil then
-				log:fatal("buf.data nil")
+				log:fatal("buf.data *is* nil")
 			else
-				log:info("buf.data *not* nil")
+				log:info("buf.data not nil")
 			end
 			local pkt = buf:getUdpPacket(ipv4)
 			log:info("2")

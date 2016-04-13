@@ -295,7 +295,7 @@ function rxQueue:bufArray(s)
 end
 
 function rxQueue:__tostring()
-	log:debug("rxQueue:__tostring(): self.dev.iface=" .. self.port .. ", id=" .. self.id)
+	log:debug("rxQueue:__tostring(): self.dev.iface=" .. self.dev.port .. ", id=" .. self.id)
 	return("[RxQueue: interface=%s, ringid=%d"):format(self.dev.port, self.id)
 end
 
