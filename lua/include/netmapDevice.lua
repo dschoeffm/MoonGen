@@ -208,13 +208,16 @@ end
 --- Send the current buffer
 --- @param bufs: packet buffers to send
 function txQueue:send(bufs)
+	log:info("txQueue:send()")
 	if bufs.queue.tx == false then -- we are currently forwarding a packet
 		-- swap all the indices and mbuf data pointers
 		-- probably a C job
 		while bufs.size > self:avail() do
 			self:sync()
 		end
+		log:info("before swap"
 		netmapc.swap_bufs(bufs.size, self.dev.c, self.id, bufs.queue.dev.c, bufs.queue.id)
+		log:info("after swap")
 		self:sync()
 		return -- do not commence beyond the if
 	end
@@ -257,6 +260,7 @@ function rxQueue:sync()
 end
 
 function rxQueue:recv(bufs)
+	log:info("rxQueue:recv()")
 	self:sync()
 	while self:avail() < 1 do
 		self:sync()
