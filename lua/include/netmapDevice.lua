@@ -86,7 +86,7 @@ function mod.config(...)
 	for q=0, args.rxQueues-1 do
 		local queue = dev_ret:getRxQueue(q)
 		for i=0,queue.nmRing.num_slots -1 do
-			buf = ffi.new("struct rte_mbuf")
+			local buf = ffi.new("struct rte_mbuf")
 			dev_ret.c.nm_ring[q].mbufs_rx[i] = buf
 			local buf_addr = netmapc.NETMAP_BUF_wrapper(queue.nmRing, queue.nmRing.slot[i].buf_idx)
 			buf.pkt.data = buf_addr
