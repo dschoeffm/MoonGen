@@ -215,7 +215,7 @@ function txQueue:send(bufs)
 		while bufs.size > self:avail() do
 			self:sync()
 		end
-		log:info("before swap"
+		log:info("before swap")
 		netmapc.swap_bufs(bufs.size, self.dev.c, self.id, bufs.queue.dev.c, bufs.queue.id)
 		log:info("after swap")
 		self:sync()
