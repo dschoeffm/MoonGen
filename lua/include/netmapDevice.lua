@@ -273,6 +273,7 @@ function rxQueue:recv(bufs)
 	end
 	netmapc.mbufs_slots_update(self.dev.c, self.id, bufs.first, bufs.size)
 
+	log:info("rxQueue:recv() returns")
 	return bufs.size
 end
 
