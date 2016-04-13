@@ -72,7 +72,7 @@ function mod.config(...)
 
 	log:info("1")
 	-- create the mempools for the queues now (they need one anyways)
-	for q=0, args.txQueues do
+	for q=0, args.txQueues-1 do
 		local queue = dev_ret:getTxQueue(q)
 		log:info("2")
 		for i=0,queue.nmRing.num_slots -1 do
@@ -95,7 +95,7 @@ function mod.config(...)
 	end
 	log:info("11")
 	ffi.sleep(1)
-	for q=0, args.rxQueues do
+	for q=0, args.rxQueues-1 do
 		local queue = dev_ret:getRxQueue(q)
 		log:info("12")
 		for i=0,queue.nmRing.num_slots -1 do
