@@ -160,6 +160,24 @@ void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm
 	struct nm_ring* nm_ringTxId = txDev->nm_ring[txId];
 	struct nm_ring* nm_ringRxId = rxDev->nm_ring[rxId];
 
+	// sanity check
+	for(uint32_t i=0; i<txRing->num_slots; i++){
+		if(nm_ringTxId->mbufs_tx[i]->data == NULL
+				|| nm_ringTxId->mbufs_tx[i]->pkt.data == NULL){
+			printf("Error: data pointer was NULL\n");
+			int j = *((int*) NULL+1); //provoce segfault
+			printf("%d\n", j);
+		}
+	}
+	for(uint32_t i=0; i<rxRing->num_slots; i++){
+		if(nm_ringRxId->mbufs_rx[i]->data == NULL
+				|| nm_ringRxId->mbufs_rx[i]->pkt.data == NULL){
+			printf("Error: data pointer was NULL\n");
+			int j = *((int*) NULL+1); //provoce segfault
+			printf("%d\n", j);
+		}
+	}
+
 	__atomic_add_fetch (&txDev->tx_pkts, count, __ATOMIC_RELAXED);
 	for(uint32_t i=0; i<count; i++){
 		// swap buffers in slots
