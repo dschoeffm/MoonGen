@@ -38,12 +38,15 @@ function futSlave(tx, rx)
 	p.start()
 	while dpdk.running() do
 		local rx = rx:recv(bufs)
+		log:info("1")
 		for i = 1, rx do
 			local buf = bufs[i]
 			local pkt = buf:getUdpPacket(ipv4)
+			log:info("2")
 			pkt.eth:setSrcString("a0:36:9f:3b:71:d8")
 			pkt.eth:setDstString("A0:36:9F:3B:71:DA")
 			rxCtr:countPacket(buf)
+			log:info("3")
 		end
 		rxCtr:update()
 		tx:send(bufs)
