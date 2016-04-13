@@ -70,50 +70,30 @@ function mod.config(...)
 		log:fatal("Something went wrong during netmapc.nm_config")
 	end
 
-	log:info("1")
 	-- create the mempools for the queues now (they need one anyways)
 	for q=0, args.txQueues-1 do
 		local queue = dev_ret:getTxQueue(q)
-		log:info("2")
 		for i=0,queue.nmRing.num_slots -1 do
-			log:info("3")
 			local buf = ffi.new("struct rte_mbuf")
-			log:info("4")
 			dev_ret.c.nm_ring[q].mbufs_tx[i] = buf
-			log:info("5")
 			local buf_addr = netmapc.NETMAP_BUF_wrapper(queue.nmRing, queue.nmRing.slot[i].buf_idx)
-			log:info("6")
 			buf.pkt.data = buf_addr
-			log:info("7")
 			buf.data = buf_addr
-			log:info("8")
 			buf.pkt.data_len = 1522
-			log:info("9")
 			buf.pkt.pkt_len = 1522
 		end
-		log:info("10")
 	end
-	log:info("11")
 	for q=0, args.rxQueues-1 do
 		local queue = dev_ret:getRxQueue(q)
-		log:info("12")
 		for i=0,queue.nmRing.num_slots -1 do
-			log:info("13")
 			buf = ffi.new("struct rte_mbuf")
-			log:info("14")
 			dev_ret.c.nm_ring[q].mbufs_rx[i] = buf
-			log:info("15")
 			local buf_addr = netmapc.NETMAP_BUF_wrapper(queue.nmRing, queue.nmRing.slot[i].buf_idx)
-			log:info("16")
 			buf.pkt.data = buf_addr
-			log:info("17")
 			buf.data = buf_addr
-			log:info("18")
 			buf.pkt.data_len = 1522
-			log:info("19")
 			buf.pkt.pkt_len = 1522
 		end
-		log:info("20")
 	end
 
 	return dev_ret
