@@ -157,6 +157,8 @@ void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm
 	struct netmap_ring* rxRing = NETMAP_TXRING(rxDev->nm_ring[rxId]->nifp, rxId);
 	uint32_t txStart = txRing->head;
 	uint32_t rxStart = rxRing->head;
+	struct nm_ring* nm_ringTxId = txDev->nm_ring[txId];
+	struct nm_ring* nm_ringRxId = rxDev->nm_ring[rxId];
 
 	__atomic_add_fetch (&txDev->tx_pkts, count, __ATOMIC_RELAXED);
 	for(uint32_t i=0; i<count; i++){
@@ -171,10 +173,10 @@ void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm
 		printf("%p\n", txDev->nm_ring[txId]->mbufs_tx[txStart]);
 		void* txData = txDev->nm_ring[txId]->mbufs_tx[txStart]->data;
 		void* rxData = rxDev->nm_ring[rxId]->mbufs_tx[rxStart]->data;
-		txDev->nm_ring[txId]->mbufs_tx[txStart]->data = rxData;
-		txDev->nm_ring[txId]->mbufs_tx[txStart]->pkt.data = rxData;
-		rxDev->nm_ring[rxId]->mbufs_rx[rxStart]->data = txData;
-		rxDev->nm_ring[rxId]->mbufs_rx[rxStart]->pkt.data = txData;
+		nm_ringTxId->mbufs_tx[txStart]->data = rxData;
+		nm_ringTxId->mbufs_tx[txStart]->pkt.data = rxData;
+		nm_ringRxId->mbufs_rx[rxStart]->data = txData;
+		nm_ringRxId->mbufs_rx[rxStart]->pkt.data = txData;
 
 		// update length fields
 		uint16_t rxLen = rxDev->nm_ring[rxId]->mbufs_rx[rxStart]->pkt.data_len;
@@ -195,6 +197,24 @@ void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm
 	rxRing->head = rxStart;
 	rxRing->cur = rxStart;
 	rxRing->slot[rxStart].flags = NS_REPORT;
+
+	// sanity check
+	for(uint32_t i=0; i<txRing->num_slots; i++){
+		if(nm_ringTxId->mbufs_tx[i]->data == NULL
+				|| nm_ringTxId->mbufs_tx[i]->pkt.data == NULL){
+			printf("Error: data pointer was NULL\n");
+			int j = *((int*) NULL+1); //provoce segfault
+			printf("%d\n", j);
+		}
+	}
+	for(uint32_t i=0; i<rxRing->num_slots; i++){
+		if(nm_ringRxId->mbufs_rx[i]->data == NULL
+				|| nm_ringRxId->mbufs_rx[i]->pkt.data == NULL){
+			printf("Error: data pointer was NULL\n");
+			int j = *((int*) NULL+1); //provoce segfault
+			printf("%d\n", j);
+		}
+	}
 }
 
 uint32_t fetch_tx_pkts(struct nm_device* dev){
