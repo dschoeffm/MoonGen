@@ -42,7 +42,6 @@ function futSlave(tx, rx)
 		for i = 1, rx do
 			local buf = bufs[i]
 			local pkt = buf:getUdpPacket(ipv4)
-			log:info("data pointer" .. tonumber(buf.data))
 			log:info("2")
 			pkt.eth:setSrcString("a0:36:9f:3b:71:d8")
 			log:info("3")

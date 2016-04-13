@@ -243,7 +243,7 @@ function txQueue:setRate(rate)
 end
 
 function txQueue:__tostring()
-	log:debug("txQueue:__tostring(): self.dev.iface=" .. self.port .. ", id=" .. self.id)
+	log:debug("txQueue:__tostring(): self.dev.iface=" .. self.dev.port .. ", id=" .. self.id)
 	return("[TxQueue: interface=%s, ringid=%d"):format(self.dev.port, self.id)
 end
 
