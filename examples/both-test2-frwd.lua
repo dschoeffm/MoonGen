@@ -35,6 +35,8 @@ function futSlave(tx, rx)
 	log.level = 0
 	local bufs = rx:bufArray() -- Netmap
 	local rxCtr = stats:newPktRxCounter("futSlave", "plain")
+	local srcMac = parseMacAddress("a0:36:9f:3b:71:d8", true)
+	local dstMac = parseMacAddress("A0:36:9F:3B:71:DA", true)
 	p.start()
 	while dpdk.running() do
 		local rx = rx:recv(bufs)
@@ -49,9 +51,9 @@ function futSlave(tx, rx)
 			end
 			local pkt = buf:getUdpPacket(ipv4)
 			--log:info("2")
-			pkt.eth:setSrcString("a0:36:9f:3b:71:d8")
+			pkt.eth:setSrc(srcMac)
 			--log:info("3")
-			pkt.eth:setDstString("A0:36:9F:3B:71:DA")
+			pkt.eth:setDst(dstMac)
 			rxCtr:countPacket(buf)
 			--log:info("4")
 		end
