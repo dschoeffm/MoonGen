@@ -151,7 +151,7 @@ void slot_mbuf_update(struct nm_device* dev, uint16_t ringid, uint32_t start, ui
 
 void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm_device* rxDev, uint16_t rxId){
 	//debug output
-	printf("count=%d, txDev=%p, txId=%d, rxDev=%p, rxid=%d\n", count, txDev, txId, rxDev, rxId);
+	//printf("count=%d, txDev=%p, txId=%d, rxDev=%p, rxid=%d\n", count, txDev, txId, rxDev, rxId);
 
 	struct netmap_ring* txRing = NETMAP_TXRING(txDev->nm_ring[txId]->nifp, txId);
 	struct netmap_ring* rxRing = NETMAP_TXRING(rxDev->nm_ring[rxId]->nifp, rxId);
@@ -190,7 +190,7 @@ void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm
 		nm_ringTxId->mbufs_tx[txStart]->pkt.data = NETMAP_BUF(txRing, txRing->slot[txStart].buf_idx);
 		nm_ringRxId->mbufs_rx[rxStart]->data = NETMAP_BUF(txRing, txRing->slot[txStart].buf_idx);
 		nm_ringRxId->mbufs_rx[rxStart]->pkt.data = NETMAP_BUF(txRing, txRing->slot[txStart].buf_idx);
-		printf("txData=%p\nrxData=%p\n", nm_ringTxId->mbufs_tx[txStart]->data, nm_ringRxId->mbufs_rx[rxStart]->data);
+		//printf("txData=%p\nrxData=%p\n", nm_ringTxId->mbufs_tx[txStart]->data, nm_ringRxId->mbufs_rx[rxStart]->data);
 
 		// update length fields
 		uint16_t rxLen = rxDev->nm_ring[rxId]->mbufs_rx[rxStart]->pkt.data_len;
