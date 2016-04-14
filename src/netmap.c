@@ -197,20 +197,27 @@ void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm
 		txRing->slot[txStart].len = rxLen;
 		__atomic_add_fetch (&txDev->tx_octetts, (uint64_t) rxLen, __ATOMIC_RELAXED);
 		// update flag
-		txRing->slot[txStart].flags = NS_BUF_CHANGED | NS_REPORT;
-		rxRing->slot[rxStart].flags = NS_BUF_CHANGED | NS_REPORT;
+		txRing->slot[txStart].flags = NS_BUF_CHANGED;
+		rxRing->slot[rxStart].flags = NS_BUF_CHANGED;
 
 		// nextSlot for txStart and rxStart
-		txStart = nm_ring_next(txRing, txStart);
-		rxStart = nm_ring_next(rxRing, rxStart);
+		if(likely(i+1 < count)){
+			txStart = nm_ring_next(txRing, txStart);
+			rxStart = nm_ring_next(rxRing, rxStart);
+		}
 	}
+
+	txRing->slot[txStart].flags = NS_REPORT;
+	rxRing->slot[rxStart].flags = NS_REPORT;
+
+	txStart = nm_ring_next(txRing, txStart);
+	rxStart = nm_ring_next(rxRing, rxStart);
+
 	txRing->head = txStart;
 	txRing->cur = txStart;
-	txRing->slot[txStart].flags = NS_REPORT;
 
 	rxRing->head = rxStart;
 	rxRing->cur = rxStart;
-	rxRing->slot[rxStart].flags = NS_REPORT;
 
 	// sanity check
 	for(uint32_t i=0; i<txRing->num_slots; i++){
