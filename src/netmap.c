@@ -197,8 +197,8 @@ void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm
 		txRing->slot[txStart].len = rxLen;
 		__atomic_add_fetch (&txDev->tx_octetts, (uint64_t) rxLen, __ATOMIC_RELAXED);
 		// update flag
-		txRing->slot[txStart].flags = NS_BUF_CHANGED;
-		rxRing->slot[rxStart].flags = NS_BUF_CHANGED;
+		txRing->slot[txStart].flags = NS_BUF_CHANGED | NS_REPORT;
+		rxRing->slot[rxStart].flags = NS_BUF_CHANGED | NS_REPORT;
 
 		// nextSlot for txStart and rxStart
 		txStart = nm_ring_next(txRing, txStart);
