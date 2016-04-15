@@ -226,12 +226,10 @@ function txQueue:send(bufs)
 			self:sync()
 		end
 		--log:info("before swap")
-		netmapc.swap_bufs(bufs.size, self.dev.c, self.id, bufs.queue.dev.c, bufs.queue.id)
-		--log:info("after swap")
+		netmapc.swap_bufs(bufs.size, self.dev.c, self.id, self.nmRing.head, bufs.queue.dev.c, bufs.queue.id, bufs.first)
+		netmapc.slot_mbuf_update(self.dev.c, self.id, bufs.first, bufs.size);
 		self:sync()
-		return -- do not commence beyond the if
 	end
-	local cur = bufs.first
 	netmapc.slot_mbuf_update(self.dev.c, self.id, bufs.first, bufs.size);
 	-- syncing and actually sending out packets is too costly
 	-- done in alloc of bufArray...

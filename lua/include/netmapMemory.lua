@@ -15,6 +15,7 @@ local mempool = {}
 mempool.__index = mempool
 
 local bufArray = {}
+local mbufs = {}
 
 -- local netmapSlot = {}
 -- netmapSlot.__index = netmapSlot
@@ -48,9 +49,13 @@ function mod.createMemPool(...)
 	end
 
 	local mem = {}
+	setmetatable(mem, mempool)
 	mem.queue = args.queue
 	mem.mbufs = {}
+	mem.mbufs.mem = mem
+	setmetatable(mem.mbufs, mbufs)
 
+--[[
 	for i=0,args.queue.nmRing.num_slots -1 do
 		if mem.queue.tx then
 			mem.mbufs[i] = mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_tx[i]
@@ -58,18 +63,24 @@ function mod.createMemPool(...)
 			mem.mbufs[i] = mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_rx[i]
 		end
 	end
-
+--]]
 	if args.func then
 		for i=0,args.queue.nmRing.num_slots -1 do
 			args.func(mem.mbufs[i])
 		end
 	end
 
-	setmetatable(mem, mempool)
-
 	log:debug("return from createMemPool")
 
 	return mem
+end
+
+function mbufs.__index(self, k)
+	if self.mem.queue.tx then
+		return self.mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_tx[i]
+	else
+		return self.mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_rx[i]
+	end
 end
 
 --- This function returns a buffer array
@@ -88,7 +99,6 @@ function mempool:bufArray(n)
 	local bufs = {
 		size = n,
 		maxSize = n,
-		array = 0, --TODO where will this be used afterall? (was there with DPDK)
 		mem = self,
 		mbufs = self.mbufs,
 		queue = self.queue,

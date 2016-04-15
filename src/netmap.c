@@ -149,6 +149,36 @@ void slot_mbuf_update(struct nm_device* dev, uint16_t ringid, uint32_t start, ui
 	nm_ring->slot[start].flags = NS_REPORT;
 }
 
+void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, uint32_t txStart, struct nm_device* rxDev, uint16_t rxId, uint32_t rxStart){
+	//debug output
+	//printf("count=%d, txDev=%p, txId=%d, rxDev=%p, rxid=%d\n", count, txDev, txId, rxDev, rxId);
+
+	struct netmap_ring* txRing = NETMAP_TXRING(txDev->nm_ring[txId]->nifp, txId);
+	struct netmap_ring* rxRing = NETMAP_TXRING(rxDev->nm_ring[rxId]->nifp, rxId);
+	struct nm_ring* nm_ringTx = txDev->nm_ring[txId];
+	struct nm_ring* nm_ringRx = rxDev->nm_ring[rxId];
+
+	for(uint32_t i=0; i<count; i++){
+		// swap data pointers
+		struct rte_mbuf* tmpMbuf = nm_ringTx->mbufs_tx[txStart];
+		nm_ringTx->mbufs_tx[txStart] = nm_ringRx->mbufs_rx[rxStart];
+		nm_ringRx->mbufs_rx[rxStart] = tmpMbuf;
+
+		// swap buffer indices
+		uint32_t tmpBuf = txRing->slot[txStart].buf_idx;
+		txRing->slot[txStart].buf_idx = rxRing->slot[rxStart].buf_idx;
+		rxRing->slot[rxStart].buf_idx = tmpBuf;
+
+		// set BUF_CHANGED flag
+		txRing->slot[txStart].flags = NS_BUF_CHANGED;
+		rxRing->slot[rxStart].flags = NS_BUF_CHANGED;
+
+		//update starts
+		txStart = nm_ring_next(txRing, txStart);
+		rxStart = nm_ring_next(rxRing, rxStart);
+	}
+}
+/*
 void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm_device* rxDev, uint16_t rxId){
 	//debug output
 	//printf("count=%d, txDev=%p, txId=%d, rxDev=%p, rxid=%d\n", count, txDev, txId, rxDev, rxId);
@@ -237,6 +267,7 @@ void swap_bufs(uint32_t count, struct nm_device* txDev, uint16_t txId, struct nm
 		}
 	}
 }
+*/
 
 uint32_t fetch_tx_pkts(struct nm_device* dev){
 	return __atomic_fetch_and(&dev->tx_pkts, 0x0, __ATOMIC_RELAXED);
