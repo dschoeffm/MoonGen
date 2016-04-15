@@ -185,7 +185,7 @@ function txQueue:send(bufs)
 		if not self.haveMempool then
 			self.haveMempool = true
 			self.mem = memory.createMemPool({ queue = self })
-			self.bufs = mem:bufArray(bufs.maxSize)
+			self.bufs = self.mem:bufArray(bufs.maxSize)
 			self.bufsLeft = bufs.maxSize
 			bufs:alloc(1522)
 		end
