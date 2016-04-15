@@ -100,7 +100,7 @@ function mempool:bufArray(n)
 		size = n,
 		maxSize = n,
 		mem = self,
-		mbufs = self.mbufs,
+		--mbufs = self.mbufs,
 		queue = self.queue,
 		dev = self.queue.dev,
 		numSlots = self.queue.nmRing.num_slots,
