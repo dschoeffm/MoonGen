@@ -116,6 +116,7 @@ end
 function bufArray:alloc(len)
 	-- no actual allocation, just update the the length fields
 	-- wait until there is space in the ring
+	log:info("bufArray:alloc(len) called")
 	local queue = self.queue
 	while queue:avail() < self.maxSize do
 		queue:sync()
