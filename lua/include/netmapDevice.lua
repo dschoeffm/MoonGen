@@ -188,6 +188,7 @@ function txQueue:send(bufs)
 			self.bufs = self.mem:bufArray(bufs.maxSize)
 			self.bufsLeft = bufs.maxSize
 			bufs:alloc(1522)
+			ffi.cdef[[void *memcpy(void *dest, const void *src, size_t n);]]
 		end
 		-- copy packet content
 		local max = math.max(self.bufsLeft, bufs.size)
