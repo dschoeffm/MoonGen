@@ -169,7 +169,6 @@ function dev:__serialize()
 	return ('local dev= require "netmapDevice" return dev.get(%s)'):format(self.port), true
 end
 
-
 ----------------------------------------------------------------------------------
 ---- Netmap Tx Queue
 ----------------------------------------------------------------------------------
@@ -182,8 +181,36 @@ end
 --- Send the current buffer
 --- @param bufs: packet buffers to send
 function txQueue:send(bufs)
-	local cur = bufs.first
-	netmapc.slot_mbuf_update(self.dev.c, self.id, bufs.first, bufs.size);
+	if not bufs.queue.tx then
+		if not self.haveMempool then
+			self.haveMempool = true
+			self.mem = memory.createMemPool({ queue = self })
+			self.bufs = mem:bufArray(bufs.maxSize)
+			self.bufsLeft = bufs.maxSize
+			bufs:alloc(1522)
+		end
+		-- copy packet content
+		local max = math.max(self.bufsLeft, bufs.size)
+		local min = math.min(self.bufsLeft, bufs.size)
+		local off = bufs.maxSize - self.bufsLeft
+		for i=1,min do
+			ffi.memcpy(self.bufs[i+off].data, bufs[i].data, bufs[i].len)
+			self.bufs[i+off].pkt.data_len = bufs[i].pkt.data_len
+		end
+		self.bufsLeft = self.bufsLeft - bufs.size
+		if max-min > 0 then
+			netmapc.slot_mbuf_update(self.dev.c, self.id, self.bufs.first, bufs.maxSize);
+			bufs:alloc(1522) -- length does not really matter...
+			self.bufsLeft = bufs.maxSize
+			for i=1,max-min do
+				ffi.memcpy(self.bufs[i].data, bufs[i].data, bufs[i].len)
+				self.bufs[i+off].pkt.data_len = bufs[i].pkt.data_len
+			end
+			self.bufsLeft = self.bufsLeft - bufs.size
+		end
+	else
+		netmapc.slot_mbuf_update(self.dev.c, self.id, bufs.first, bufs.size);
+	end
 	-- syncing and actually sending out packets is too costly
 	-- done in alloc of bufArray...
 end
