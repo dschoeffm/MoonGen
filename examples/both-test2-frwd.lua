@@ -80,7 +80,7 @@ function loadSlave(queue)
 	memPoolArgs.func = function(buf)
 		buf:getUdpPacket(ipv4):fill{
 			--ethSrc="90:e2:ba:2c:cb:02", ethDst="90:e2:ba:35:b5:81",
-			ethSrc="A0:36:9F:3B:71:DA", ethDst="a0:36:9f:3b:71:d8",
+			ethSrc="A0:36:9F:3B:71:DA", ethDst="ff:ff:ff:ff:ff:ff", --ethDst="a0:36:9f:3b:71:d8",
 			ip4Dst="192.168.1.1", ip4Src="192.168.0.1",
 			pktLength=packetLen }
 		end
