@@ -199,7 +199,7 @@ function txQueue:send(bufs)
 			self.bufs[i+off].pkt.data_len = bufs[i].pkt.data_len
 		end
 		self.bufsLeft = self.bufsLeft - bufs.size
-		if max-min > 0 then
+		if bufs.size > (self.bufsLeft+bufs.size) then
 			netmapc.slot_mbuf_update(self.dev.c, self.id, self.bufs.first, bufs.maxSize);
 			bufs:alloc(1522) -- length does not really matter...
 			self.bufsLeft = bufs.maxSize
