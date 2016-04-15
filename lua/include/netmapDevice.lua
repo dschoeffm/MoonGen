@@ -194,7 +194,7 @@ function txQueue:send(bufs)
 		local min = math.min(self.bufsLeft, bufs.size)
 		local off = bufs.maxSize - self.bufsLeft
 		for i=1,min do
-			ffi.memcpy(self.bufs[i+off].data, bufs[i].data, bufs[i].len)
+			ffi.C.memcpy(self.bufs[i+off].data, bufs[i].data, bufs[i].len)
 			self.bufs[i+off].pkt.data_len = bufs[i].pkt.data_len
 		end
 		self.bufsLeft = self.bufsLeft - bufs.size
@@ -203,7 +203,7 @@ function txQueue:send(bufs)
 			bufs:alloc(1522) -- length does not really matter...
 			self.bufsLeft = bufs.maxSize
 			for i=1,max-min do
-				ffi.memcpy(self.bufs[i].data, bufs[i].data, bufs[i].len)
+				ffi.C.memcpy(self.bufs[i].data, bufs[i].data, bufs[i].len)
 				self.bufs[i+off].pkt.data_len = bufs[i].pkt.data_len
 			end
 			self.bufsLeft = self.bufsLeft - bufs.size
