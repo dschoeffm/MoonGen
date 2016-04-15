@@ -96,12 +96,12 @@ function loadSlave(queue)
 		bufs:alloc(packetLen)
 		for i, buf in ipairs(bufs) do
 			local pkt = buf:getUdpPacket(ipv4)
-			
+
 			--increment IP
 			pkt.ip4.src:add(counter)
 			counter = incAndWrap(counter, 100)
 			txCtr:countPacket(buf)
-		end 
+		end
 		--offload checksums to NIC
 		bufs:offloadTcpChecksums(ipv4)
 		txCtr:update()
