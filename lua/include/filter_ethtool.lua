@@ -51,7 +51,7 @@ function mod.addHW5tupleFilter(dev, filter, queue, priority)
 		cmd = cmd .. " tcp4"
 	else if filter.l4protocol == ip.PROTO_UDP then
 		cmd = cmd .. " udp4"
-	else 
+	else
 		log:fatal("filter_ethtool.addHW5tupleFilter() unsupported layer 4 protocol used")
 	end
 	if filter.src_ip then
