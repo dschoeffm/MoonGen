@@ -25,6 +25,7 @@ SET(FILES
 	src/namespaces.cpp
 	src/ring.c
 	src/rate_limiter.cpp
+  src/netmap.c
 )
 
 SET(DPDK_LIBS
