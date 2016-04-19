@@ -67,7 +67,7 @@ function mod.addHW5tupleFilter(dev, filter, queue, priority)
 		cmd = cmd .. " src-port " .. filter.src_port
 	end
 	if filter.dst_port then
-		cmd = cmd .. " dst-port " .. filter.dst-port
+		cmd = cmd .. " dst-port " .. filter.dst_port
 	end
 	if filter.l4protocol then
 		cmd = cmd .. " l4proto " .. filter.l4protocol
