@@ -59,10 +59,8 @@ function mod.createMemPool(...)
 			mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_rx[i] = mem.mbufs[i]
 		end
 		local buf_addr = netmapc.NETMAP_BUF_wrapper(mem.queue.nmRing, mem.queue.nmRing.slot[i].buf_idx)
-		mem.mbufs[i].pkt.data = buf_addr
-		mem.mbufs[i].data = buf_addr
-		mem.mbufs[i].pkt.data_len = 1522
-		mem.mbufs[i].pkt.pkt_len = 1522
+		mem.mbufs[i].buf_addr = buf_addr
+		mem.mbufs[i].buf_len = 1522
 	end
 
 	if args.func then

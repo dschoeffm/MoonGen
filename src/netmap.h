@@ -11,52 +11,84 @@
 #include <string.h>
 #include <linux/if_packet.h> 
 
-// packets/mbufs
-struct rte_pktmbuf {
-	struct rte_mbuf* next;
-	void* data;
-	uint16_t data_len;
-	uint8_t nb_segs;
-	uint8_t in_port;
-	uint32_t pkt_len;
-	//union {
-	uint16_t header_lengths;
-	uint16_t vlan_tci;
-	//uint32_t value;
-	//} offsets;
-	union {
-		uint32_t rss;
-		struct {
-			uint16_t hash;
-			uint16_t id;
-		} fdir;
-		uint32_t sched;
-	} hash;
-};
-
+struct rte_mbuf;
 union rte_ipsec {
 	uint32_t data;
-	//struct {
-	//      uint16_t sa_idx:10;
-	//      uint16_t esp_len:9;
-	//      uint8_t type:1;
-	//      uint8_t mode:1;
-	//      uint16_t unused:11; /**< These 11 bits are unused. */
-	//} sec;
 };
 
 struct rte_mbuf {
-	void* pool;
-	void* data;
-	uint64_t phy_addr;
-	uint16_t len;
+	void *buf_addr;           /**< Virtual address of segment buffer. */
+	void *buf_physaddr; /**< Physical address of segment buffer. */
+
+	uint16_t buf_len;         /**< Length of segment buffer. */
+
+	/* next 6 bytes are initialised on RX descriptor rearm */
+	uint16_t data_off;
+
 	uint16_t refcnt;
-	uint8_t type;
-	uint8_t reserved;
-	uint16_t ol_flags;
-	struct rte_pktmbuf pkt;
-	union rte_ipsec ol_ipsec;
+	uint8_t nb_segs;          /**< Number of segments. */
+	uint8_t port;             /**< Input port. */
+
+	uint64_t ol_flags;        /**< Offload features. */
+	/* remaining bytes are set on RX when pulling packet from descriptor */
+
+	/*
+	 * The packet type, which is the combination of outer/inner L2, L3, L4
+	 * and tunnel types.
+	 */
+	uint32_t packet_type; /**< L2/L3/L4 and tunnel information. */
+
+	uint32_t pkt_len;         /**< Total pkt len: sum of all segments. */
+	uint16_t data_len;        /**< Amount of data in segment buffer. */
+	uint16_t vlan_tci;        /**< VLAN Tag Control Identifier (CPU order) */
+
+	union {
+		uint32_t rss;     /**< RSS hash result if RSS enabled */
+		struct {
+			union {
+				struct {
+					uint16_t hash;
+					uint16_t id;
+				};
+				uint32_t lo;
+				/**< Second 4 flexible bytes */
+			};
+			uint32_t hi;
+			/**< First 4 flexible bytes or FD ID, dependent on
+		     PKT_RX_FDIR_* flag in ol_flags. */
+		} fdir;           /**< Filter identifier if FDIR enabled */
+		struct {
+			uint32_t lo;
+			uint32_t hi;
+		} sched;          /**< Hierarchical scheduler */
+		uint32_t usr;	  /**< User defined tags. See rte_distributor_process() */
+	} hash;                   /**< hash information */
+
+	uint32_t seqn; /**< Sequence number. See also rte_reorder_insert() */
+
+	uint16_t vlan_tci_outer;  /**< Outer VLAN Tag Control Identifier (CPU order) */
+
+	/* second cache line - fields only used in slow path or on TX */
+
+	uint64_t udata64;
+
+	struct rte_mempool *pool; /**< Pool from which mbuf was allocated. */
+	struct rte_mbuf *next;    /**< Next segment of scattered packet. */
+
+	/* fields to support TX offloads */
+	uint64_t tx_offload;
+
+	/** Size of the application private data. In case of an indirect
+	 * mbuf, it stores the direct mbuf private data size. */
+	uint16_t priv_size;
+
+	/** Timesync flags for use with IEEE1588. */
+	uint16_t timesync;
+
+	/* Chain of off-load operations to perform on mbuf */
+	struct rte_mbuf_offload *offload_ops;
 };
+
 
 static struct nm_devices {
 	struct nm_device* dev[64];
