@@ -9,7 +9,7 @@ local ffi = require "ffi"
 local log = require "log"
 local memory = require "netmapMemory"
 local ethtool = require "netmapEthtool"
--- local filter_ethtool = require "filter_ethtool"
+local filter_ethtool = require "filter_ethtool"
 
 local mod = {} -- local module
 
