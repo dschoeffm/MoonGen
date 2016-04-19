@@ -72,7 +72,7 @@ function loadSlave(queue)
 			
 			--increment IP
 			pkt.udp:setDstPort(counter+1024)
-			counter = incAndWrap(counter, 10)
+			counter = incAndWrap(counter, 100)
 
 			-- dump first 3 packets
 			--if c < 3 then
