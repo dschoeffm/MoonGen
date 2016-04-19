@@ -182,6 +182,9 @@ end
 --- Send the current buffer
 --- @param bufs: packet buffers to send
 function txQueue:send(bufs)
+	if not self.alreadyPrintedFd then
+		log:info("tx Dev: " .. self.dev.port .. ", id: " .. self.id .. ", fd: " .. self.fd)
+	end
 	local cur = bufs.first
 	netmapc.slot_mbuf_update(self.dev.c, self.id, bufs.first, bufs.size);
 	-- syncing and actually sending out packets is too costly
@@ -221,6 +224,9 @@ function rxQueue:sync()
 end
 
 function rxQueue:recv(bufs)
+	if not self.alreadyPrintedFd then
+		log:info("rx Dev: " .. self.dev.port .. ", id: " .. self.id .. ", fd: " .. self.fd)
+	end
 	self:sync()
 	while self:avail() < 1 do
 		self:sync()
