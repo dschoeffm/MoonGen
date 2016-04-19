@@ -3,7 +3,6 @@ local nmMemory	= require "netmapMemory"
 local nmDevice	= require "netmapDevice"
 local dpdkMemory	= require "memory"
 local dpdkDevice	= require "device"
-local ip 		= require "proto/ip4"
 local stats		= require "stats"
 local log 		= require "log"
 local ffi = require "ffi"
@@ -20,7 +19,7 @@ function master(txPort, rxPort)
 	local txDev = dpdkDevice.config({ port = txPort })
 	local rxDev = nmDevice.config({ port = rxPort, rxQueues = 2 })
 
-	rxDev:addHW5tupleFilter({l4protocol = ip.PROTO_UDP, dst_port = 1025}, rxDev:getRxQueue(1), 0)
+	rxDev:addHW5tupleFilter({l4protocol = 0x11, dst_port = 1025}, rxDev:getRxQueue(1), 0)
 
 	dpdk.launchLua("loadSlave", txDev:getTxQueue(0))
 	dpdk.launchLua("counterSlave", rxDev:getRxQueue(0))
