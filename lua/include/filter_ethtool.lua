@@ -26,7 +26,7 @@ end
 --- Installs a 5tuple filter on the device.
 ---  Matching packets will be redirected into the specified rx queue
 --- @param filter A table describing the filter. Possible fields are
----   src_ip    :  Sourche IPv4 Address
+---   src_ip    :  Source IPv4 Address
 ---   dst_ip    :  Destination IPv4 Address
 ---   src_port  :  Source L4 port
 ---   dst_port  :  Destination L4 port

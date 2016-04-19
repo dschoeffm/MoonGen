@@ -9,7 +9,7 @@ local ffi = require "ffi"
 local log = require "log"
 local memory = require "netmapMemory"
 local ethtool = require "netmapEthtool"
-local filter_ethtool = require "filter_ethtool"
+-- local filter_ethtool = require "filter_ethtool"
 
 local mod = {} -- local module
 
@@ -162,11 +162,7 @@ function dev:getRxStats()
 end
 
 function dev:addHW5tupleFilter(filter, queue, priority)
-	if fun then
-		return filter_ethtool.addHW5tupleFilter(self, filter, queue, priority)
-	else
-		log:fatal("addHW5tupleFilter not supported, or not yet implemented for this device")
-	end
+	return filter_ethtool.addHW5tupleFilter(self, filter, queue, priority)
 end
 
 function dev:__tostring()
