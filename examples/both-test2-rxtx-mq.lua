@@ -20,8 +20,8 @@ function master(txPort, rxPort, rxCount)
 	local rxDev = nmDevice.config({ port = rxPort })
 
 	dpdk.launchLua("loadSlave", txDev:getTxQueue(0))
-	for i=1,rxCount do
-		dpdk.launchLua("counterSlave", rxDev:getRxQueue(i-1))
+	for i=0,rxCount-1 do
+		dpdk.launchLua("counterSlave", rxDev:getRxQueue(i))
 	end
 
 	ffi.cdef[[unsigned int sleep(unsigned int seconds);]]

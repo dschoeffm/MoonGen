@@ -18,8 +18,8 @@ function master(txPort, rxPort, txCount)
 	local txDev = nmDevice.config({ port = txPort, txQueues = txCount, rxQueues = txCount })
 	local rxDev = dpdkDevice.config({ port = rxPort })
 
-	for i=1,txCount-1 do
-		dpdk.launchLua("loadSlave", txDev:getTxQueue(i-1))
+	for i=0,txCount-1 do
+		dpdk.launchLua("loadSlave", txDev:getTxQueue(i))
 	end
 	dpdk.launchLua("counterSlave", rxDev:getRxQueue(0))
 
