@@ -6,7 +6,6 @@
 
 local mod = {}
 
-local netmapDevice = require "netmapDevice"
 local ffi = require "ffi"
 local dpdk = require "dpdk"
 local err = require "error"
