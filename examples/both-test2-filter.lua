@@ -22,8 +22,8 @@ function master(txPort, rxPort)
 	rxDev:addHW5tupleFilter({l4protocol = 0x11, dst_port = 1025}, rxDev:getRxQueue(1), 0)
 
 	dpdk.launchLua("loadSlave", txDev:getTxQueue(0))
-	dpdk.launchLua("counterSlave", rxDev:getRxQueue(0))
-	dpdk.launchLua("counterSlave", rxDev:getRxQueue(1))
+	dpdk.launchLua("counterSlave", rxDev:getRxQueue(0), nil)
+	dpdk.launchLua("counterSlave", rxDev:getRxQueue(1), 1025)
 
 	ffi.cdef[[unsigned int sleep(unsigned int seconds);]]
 	ffi.C.sleep(20)
@@ -94,7 +94,7 @@ function loadSlave(queue)
 	log:info("loadSlave exits")
 end
 
-function counterSlave(queue)
+function counterSlave(queue, port)
 	log:info("counterSlave started")
 	log.level = 0
 	--local bufs = dpdkMemory.bufArray() -- DPDK
@@ -105,6 +105,10 @@ function counterSlave(queue)
 		local rx = queue:recv(bufs)
 		for i = 1, rx do
 			local buf = bufs[i]
+			local pkt = buf:getUdpPacket(ipv4)
+			if port and pkt.udp:getDstPort ~= port then
+				log:warn("packet with wrong dst port received")
+			end
 			rxCtr:countPacket(buf)
 		end
 		-- update() on rxPktCounters must be called to print statistics periodically
