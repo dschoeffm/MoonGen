@@ -73,12 +73,6 @@ function loadSlave(queue)
 			--increment IP
 			pkt.ip4.src:add(counter)
 			counter = incAndWrap(counter, 100)
-
-			-- dump first 3 packets
-			if c < 3 then
-				buf:dump()
-				c = c + 1
-			end
 		end 
 		--offload checksums to NIC
 		bufs:offloadTcpChecksums(ipv4)
