@@ -43,6 +43,7 @@ function mod.addHW5tupleFilter(dev, filter, queue, priority)
 	-- ethtool -K eth11 ntuple on
 	-- ethtool -U eth11 flow-type udp4 src-ip 10.0.128.23 action 2
 	--
+	log:info("entered filter_ethtool.addHW5tupleFilter()")
 	local handle = io.popen("ethtool -K eth11 ntuple on")
 	handle:read()
 	handle:close()
