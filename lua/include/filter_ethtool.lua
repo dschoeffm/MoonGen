@@ -47,9 +47,9 @@ function mod.addHW5tupleFilter(dev, filter, queue, priority)
 	local cmd = "ethtool -U flow-type "
 	if filter.l4protocol == ip.PROTO_ICMP then
 		cmd = cmd .. " ip4 l4proto 1"
-	else if filter.l4protocol == ip.PROTO_TCP then
+	elseif filter.l4protocol == ip.PROTO_TCP then
 		cmd = cmd .. " tcp4"
-	else if filter.l4protocol == ip.PROTO_UDP then
+	elseif filter.l4protocol == ip.PROTO_UDP then
 		cmd = cmd .. " udp4"
 	else
 		log:fatal("filter_ethtool.addHW5tupleFilter() unsupported layer 4 protocol used")
@@ -72,54 +72,6 @@ function mod.addHW5tupleFilter(dev, filter, queue, priority)
 
 	local handle = io.popen(cmd)
 	-- TODO pick up here TODO
-	--
-	--
-	--
-	--[[ ixgbe_code
-  local sfilter = ffi.new("struct rte_5tuple_filter")
-  sfilter.src_ip_mask   = (filter.src_ip      == nil) and 1 or 0
-  sfilter.dst_ip_mask   = (filter.dst_ip      == nil) and 1 or 0
-  sfilter.src_port_mask = (filter.src_port    == nil) and 1 or 0
-  sfilter.dst_port_mask = (filter.dst_port    == nil) and 1 or 0
-  sfilter.protocol_mask = (filter.l4protocol  == nil) and 1 or 0
-
-  sfilter.priority = priority or 1
-  if(sfilter.priority > 7 or sfilter.priority < 1) then
-    log:fatal("Filter priority has to be a number from 1 to 7")
-    return
-  end
-
-  sfilter.src_ip    = filter.src_ip     or 0
-  sfilter.dst_ip    = filter.dst_ip     or 0
-  sfilter.src_port  = filter.src_port   or 0
-  sfilter.dst_port  = filter.dst_port   or 0
-  sfilter.protocol  = filter.l4protocol or 0
-  --if (filter.l4protocol) then
-  --  print "[WARNING] Protocol filter not yet fully implemented and tested"
-  --end
-
-  if dev.filters5Tuple == nil then
-    dev.filters5Tuple = {}
-    dev.filters5Tuple.n = 0
-  end
-  dev.filters5Tuple[dev.filters5Tuple.n] = sfilter
-  local idx = dev.filters5Tuple.n
-  dev.filters5Tuple.n = dev.filters5Tuple.n + 1
-
-  local state
-  if (dev:getPciId() == device.PCI_ID_X540) then
-    -- TODO: write a proper patch for dpdk
-    state = ffi.C.mg_5tuple_add_HWfilter_ixgbe(dev.id, idx, sfilter, queue.qid)
-  else
-    state = ffi.C.rte_eth_dev_add_5tuple_filter(dev.id, idx, sfilter, queue.qid)
-  end
-
-  if (state ~= 0) then
-    log:fatal("Filter not successfully added: %s", err.getstr(-state))
-  end
-
-  return idx
-  --]]
 end
 
 return mod
