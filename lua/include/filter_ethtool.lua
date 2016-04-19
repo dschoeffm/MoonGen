@@ -44,6 +44,10 @@ function mod.addHW5tupleFilter(dev, filter, queue, priority)
 	-- ethtool -K eth11 ntuple on
 	-- ethtool -U eth11 flow-type udp4 src-ip 10.0.128.23 action 2
 	--
+	local handle = io.popen("ethtool -K eth11 ntuple on")
+	handle:read()
+	handle:close()
+
 	local cmd = "ethtool -U flow-type "
 	if filter.l4protocol == ip.PROTO_ICMP then
 		cmd = cmd .. " ip4 l4proto 1"
@@ -70,8 +74,11 @@ function mod.addHW5tupleFilter(dev, filter, queue, priority)
 		cmd = cmd .. " l4proto " .. filter.l4protocol
 	end
 
-	local handle = io.popen(cmd)
-	-- TODO pick up here TODO
+	cmd = cmd .. " action " .. queue.id
+
+	handle = io.popen(cmd)
+	handle:read()
+	handle:close()
 end
 
 return mod
