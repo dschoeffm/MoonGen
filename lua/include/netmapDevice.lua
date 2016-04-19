@@ -183,6 +183,7 @@ end
 --- @param bufs: packet buffers to send
 function txQueue:send(bufs)
 	if not self.alreadyPrintedFd then
+		self.alreadyPrintedFd = true
 		log:info("tx Dev: " .. self.dev.port .. ", id: " .. self.id .. ", fd: " .. self.fd)
 	end
 	local cur = bufs.first
@@ -225,6 +226,7 @@ end
 
 function rxQueue:recv(bufs)
 	if not self.alreadyPrintedFd then
+		self.alreadyPrintedFd = true
 		log:info("rx Dev: " .. self.dev.port .. ", id: " .. self.id .. ", fd: " .. self.fd)
 	end
 	self:sync()
