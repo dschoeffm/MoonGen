@@ -49,11 +49,11 @@ function mod.addHW5tupleFilter(dev, filter, queue, priority)
 	handle:close()
 
 	local cmd = "ethtool -U flow-type "
-	if filter.l4protocol == ip.PROTO_ICMP then
+	if filter.l4protocol == 0x01 then
 		cmd = cmd .. " ip4 l4proto 1"
-	elseif filter.l4protocol == ip.PROTO_TCP then
+	elseif filter.l4protocol == 0x06 then
 		cmd = cmd .. " tcp4"
-	elseif filter.l4protocol == ip.PROTO_UDP then
+	elseif filter.l4protocol == 0x11 then
 		cmd = cmd .. " udp4"
 	else
 		log:fatal("filter_ethtool.addHW5tupleFilter() unsupported layer 4 protocol used")
