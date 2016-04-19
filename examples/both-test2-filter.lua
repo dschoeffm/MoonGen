@@ -106,7 +106,7 @@ function counterSlave(queue, port)
 		for i = 1, rx do
 			local buf = bufs[i]
 			local pkt = buf:getUdpPacket(ipv4)
-			if port and pkt.udp:getDstPort ~= port then
+			if port and pkt.udp:getDstPort() ~= port then
 				log:warn("packet with wrong dst port received")
 			end
 			rxCtr:countPacket(buf)
