@@ -11,6 +11,7 @@ local ffi = require "ffi"
 local dpdk = require "dpdk"
 local err = require "error"
 local log = require "log"
+local ip = require "proto/ip4"
 
 --[[ Not supported at this point
 function mod.l2Filter(dev, etype, queue)
