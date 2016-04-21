@@ -114,7 +114,7 @@ function dev:getTxQueue(id)
 	local queue = {}
 	setmetatable(queue, txQueue)
 	queue.nmRing = netmapc.NETMAP_TXRING_wrapper(self.c.nm_ring[id].nifp, id)
-	log:debug("address of queue.nmRing, id=" .. id)
+	log:info("address of queue.nmRing, id=" .. id)
 	netmapc.print_pointer(ffi.cast("void*", queue.nmRing))
 	queue.fd = self.c.nm_ring[id].fd
 	queue.dev = self
