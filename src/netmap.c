@@ -202,6 +202,7 @@ static int nm_reopen(uint16_t ringid, struct nm_device* dev){
 
 	dev->nm_ring[ringid]->fd = fd;
 	dev->nm_ring[ringid]->nifp = NETMAP_IF(netmap_mmap, nmr.nr_offset);
+	printf("dev->nm_ring[%d]->nifp = %p\n", ringid, dev->nm_ring[ringid]->nifp);
 
 	return 0;
 }
