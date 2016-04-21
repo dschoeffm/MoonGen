@@ -170,6 +170,7 @@ static int nm_reopen(uint16_t ringid, struct nm_device* dev){
 	struct nmreq nmr;
 	struct nmreq* nmr_orig = &dev->nmr;
 	memcpy(&nmr, nmr_orig, sizeof(struct nmreq));
+	printf("ringid: %d\n", ringid);
 	nmr.nr_ringid = ringid | NETMAP_NO_TX_POLL;
 
 	int fd = open("/dev/netmap", O_RDWR);
