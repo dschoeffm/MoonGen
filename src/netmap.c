@@ -29,6 +29,10 @@ void hexdump(uint8_t* p, unsigned int bytes){
 	printf("\n");
 }
 
+void print_pointer(void* p){
+	printf("Pointer: %p\n", p);
+}
+
 struct netmap_if* NETMAP_IF_wrapper(void* base, uint32_t ofs){
 	return NETMAP_IF(base, ofs);
 }

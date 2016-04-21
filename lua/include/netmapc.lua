@@ -186,6 +186,7 @@ struct nm_config_struct{
 	uint16_t rxQueues;
 };
 
+void print_pointer(void* p);
 struct netmap_if* NETMAP_IF_wrapper(void* base, uint32_t ofs);
 struct netmap_ring* NETMAP_TXRING_wrapper(struct netmap_if* nifp, uint32_t index);
 struct netmap_ring* NETMAP_RXRING_wrapper(struct netmap_if* nifp, uint32_t index);
