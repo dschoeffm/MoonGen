@@ -137,7 +137,7 @@ end
 
 function bufArray.__index(self, k)
 	if type(k) == "number" then
-		if k + self.first == self.numSlots then
+		if k + self.first + 1 == self.numSlots then
 			return self.mbufs[0]
 		end
 		return self.mbufs[k + self.first]
