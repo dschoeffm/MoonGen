@@ -140,7 +140,7 @@ function bufArray.__index(self, k)
 		if k + self.first -1 == self.numSlots then
 			return self.mbufs[0]
 		end
-		return self.mbufs[k]
+		return self.mbufs[k + self.first]
 	else
 		return bufArray[k]
 	end
