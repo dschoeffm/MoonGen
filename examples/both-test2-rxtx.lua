@@ -8,10 +8,10 @@ local log 		= require "log"
 local ffi = require "ffi"
 local p = require "profiler"
 
-function master(txPort, rxPort)
+function master(txPort, rxPort, rxBufS)
 	--log.level = 0
-	if (not txPort) or (not rxPort) then
-		log:info("usage: txPort rxPort")
+	if (not txPort) or (not rxPort) or (not rxBufS) then
+		log:info("usage: txPort rxPort rxBufS")
 		return
 	end
 
@@ -91,11 +91,11 @@ function loadSlave(queue)
 	log:info("loadSlave exits")
 end
 
-function counterSlave(queue)
+function counterSlave(queue, rxBufS)
 	log:info("counterSlave started")
 	log.level = 0
 	--local bufs = dpdkMemory.bufArray() -- DPDK
-	local bufs = queue:bufArray(256) -- Netmap
+	local bufs = queue:bufArray(rxBufS) -- Netmap
 	local rxCtr = stats:newPktRxCounter("counterSlave", "plain")
 	p.start()
 	while dpdk.running() do

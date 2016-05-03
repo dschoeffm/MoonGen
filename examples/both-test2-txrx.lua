@@ -8,17 +8,17 @@ local log 		= require "log"
 local ffi = require "ffi"
 local p = require "profiler"
 
-function master(txPort, rxPort)
+function master(txPort, rxPort, txBufS)
 	--log.level = 0
-	if (not txPort) or (not rxPort) then
-		log:info("usage: txPort rxPort")
+	if (not txPort) or (not rxPort) or (not txBufS) then
+		log:info("usage: txPort rxPort txBufS")
 		return
 	end
 
 	local txDev = nmDevice.config({ port = txPort })
 	local rxDev = dpdkDevice.config({ port = rxPort })
 
-	dpdk.launchLua("loadSlave", txDev:getTxQueue(0))
+	dpdk.launchLua("loadSlave", txDev:getTxQueue(0), txBufS)
 	dpdk.launchLua("counterSlave", rxDev:getRxQueue(0))
 
 	ffi.cdef[[unsigned int sleep(unsigned int seconds);]]
@@ -28,7 +28,7 @@ function master(txPort, rxPort)
 	dpdk.waitForSlaves()
 end
 
-function loadSlave(queue)
+function loadSlave(queue, txBufS)
 	--wait for the rx slave to be initialized for sure
 	ffi.cdef[[int sleep(int sec);]]
 	ffi.C.sleep(3)
@@ -51,7 +51,7 @@ function loadSlave(queue)
 		end
 	local mem = nmMemory.createMemPool(memPoolArgs)
 
-	local bufs = mem:bufArray(128)
+	local bufs = mem:bufArray(txBufS)
 	local counter = 0
 	local c = 0
 
@@ -62,7 +62,7 @@ function loadSlave(queue)
 		bufs:alloc(packetLen)
 		for i, buf in ipairs(bufs) do
 		--for i=1,bufs.size do
-			local buf = bufs[i]
+			--local buf = bufs[i]
 			if buf == nil then
 				log:fatal("buffer was nil")
 			end
