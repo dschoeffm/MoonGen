@@ -100,14 +100,18 @@ function counterSlave(queue, port)
 	--local bufs = dpdkMemory.bufArray() -- DPDK
 	local bufs = queue:bufArray(256) -- Netmap
 	local rxCtr = stats:newPktRxCounter("counterSlave", "plain")
+	local wrong_port = false
 	p.start()
 	while dpdk.running() do
 		local rx = queue:recv(bufs)
 		for i = 1, rx do
 			local buf = bufs[i]
 			local pkt = buf:getUdpPacket(ipv4)
-			if port and pkt.udp:getDstPort() ~= port then
-				log:warn("packet with wrong dst port received")
+			if not wrong_port then
+				if port and (pkt.udp:getDstPort() ~= port) then
+					log:warn("at least one packet with wrong dst port received, queue.id=" .. queue.id, ", port=" .. port)
+				end
+				wrong_port = true
 			end
 			rxCtr:countPacket(buf)
 		end
