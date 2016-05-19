@@ -1,11 +1,10 @@
-#include <stdint.h>
-#include <rte_config.h>
-#include <rte_ip.h>
-#include <rte_udp.h>
-#include <rte_byteorder.h>
-#include <rte_mbuf.h>
-#include <rte_memcpy.h>
-#include <rte_lcore.h>
+#include "util.h"
+
+// copied from netmap_user.h
+#ifndef likely
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
+#endif /* likely and unlikely */
 
 // copied from rte_cycles.h (defined as static inline there)
 uint64_t rte_rdtsc() {
@@ -58,6 +57,22 @@ void calc_ipv4_pseudo_header_checksum(void* data, int offset) {
 void calc_ipv4_pseudo_header_checksums(struct rte_mbuf** data, int n, int offset) {
 	for (int i = 0; i < n; i++) {
 		calc_ipv4_pseudo_header_checksum(rte_pktmbuf_mtod(data[i], void*), offset);
+	}
+}
+
+void nm_calc_ipv4_pseudo_header_checksums(struct rte_mbuf** data, int n, int offset, int numSlots, int pos, uint64_t ol_flags, uint64_t tx_offload) {
+	for (int i = 0; i < n; i++) {
+		if(unlikely(pos == numSlots)){
+			pos = 0;
+		}
+
+		__builtin_prefetch(data[pos+1], 1, 1);
+		//__builtin_prefetch(rte_pktmbuf_mtod(data[pos+1], void*), 1, 1);
+
+		calc_ipv4_pseudo_header_checksum(rte_pktmbuf_mtod(data[pos], void*), offset);
+		data[pos]->ol_flags |= ol_flags;
+		data[pos]->tx_offload |=tx_offload;
+		pos++;
 	}
 }
 
@@ -117,6 +132,35 @@ void calc_ipv6_pseudo_header_checksums(struct rte_mbuf** data, int n, int offset
 	}
 }
 
+void nm_calc_ipv6_pseudo_header_checksums(struct rte_mbuf** data, int n, int offset, int numSlots, int pos, uint64_t ol_flags, uint64_t tx_offload) {
+	for (int i = 0; i < n; i++) {
+		if(unlikely(pos == numSlots)){
+			pos = 0;
+		}
+
+		__builtin_prefetch(data[pos+1], 1, 1);
+		//__builtin_prefetch(rte_pktmbuf_mtod(data[pos+1], void*), 1, 1);
+
+		calc_ipv6_pseudo_header_checksum(rte_pktmbuf_mtod(data[pos], void*), offset);
+		data[pos]->ol_flags |= ol_flags;
+		data[pos]->tx_offload |=tx_offload;
+		pos++;
+	}
+}
+
+void nm_set_offload_flags(struct rte_mbuf** data, int n, int numSlots, int pos, uint64_t ol_flags, uint64_t tx_offload) {
+	for (int i = 0; i < n; i++) {
+		if(unlikely(pos == numSlots)){
+			pos = 0;
+		}
+
+		__builtin_prefetch(data[pos+1], 1, 1);
+
+		data[pos]->ol_flags |= ol_flags;
+		data[pos]->tx_offload |=tx_offload;
+		pos++;
+	}
+}
 
 // rte_lcore/socket_id are static in rte_lcore.h
 uint32_t get_current_core() {

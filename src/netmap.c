@@ -127,16 +127,41 @@ void mbufs_slots_update(struct nm_device* dev, uint16_t ringid, uint32_t start, 
 	}
 }
 
+void prepare_offload(struct nm_device* dev, uint16_t ringid, uint32_t start, int ipv4, int tcp){
+	struct netmap_ring* nm_ring = NETMAP_TXRING(dev->nm_ring[ringid]->nifp, ringid);
+	nm_ring->slot[start].flags = 0;
+	nm_ring->slot[start].flags |= MG_OFFLOAD;
+	nm_ring->slot[start].flags |= MG_CONTEXT;
+	nm_ring->slot[start].flags |= ipv4 << MG_OFF_IPv4;
+	nm_ring->slot[start].flags |= tcp << MG_OFF_TCP;
+	// No VLAN at the moment
+}
+
 void slot_mbuf_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count){
 	struct nm_ring* ring = dev->nm_ring[ringid];
 	struct netmap_ring* nm_ring = NETMAP_TXRING(dev->nm_ring[ringid]->nifp, ringid);
 	__atomic_add_fetch (&dev->tx_pkts, count, __ATOMIC_RELAXED);
+
+	if(unlikely(start == 2048)){
+		start = 0;
+	}
+
 	for(uint32_t i=0; i<count; i++){
 		__builtin_prefetch(ring->mbufs_tx[start+1], 1, 1);
 		__builtin_prefetch(&nm_ring->slot[start+1], 1, 1);
 		uint16_t len = ring->mbufs_tx[start]->buf_len;
 		nm_ring->slot[start].len = len;
 		__atomic_add_fetch (&dev->tx_octetts, (uint64_t) len, __ATOMIC_RELAXED);
+
+		// set offloading flags
+		nm_ring->slot[start].flags |= MG_OFFLOAD;
+		nm_ring->slot[start].flags &= ~MG_CONTEXT;
+		if((ring->mbufs_tx[start]->ol_flags & PKT_TX_TCP_CKSUM)
+			       || (ring->mbufs_tx[start]->ol_flags & PKT_TX_UDP_CKSUM))
+			nm_ring->slot[start].flags |= MG_OFF_L4;
+		if(ring->mbufs_tx[start]->ol_flags & PKT_TX_IP_CKSUM)
+			nm_ring->slot[start].flags |= MG_OFF_L3;
+
 		start = nm_ring_next(nm_ring, start);
 	}
 	nm_ring->head = start;

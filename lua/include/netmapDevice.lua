@@ -182,8 +182,10 @@ end
 --- Send the current buffer
 --- @param bufs: packet buffers to send
 function txQueue:send(bufs)
+	--log:debug("sending buffers")
 	local cur = bufs.first
-	netmapc.slot_mbuf_update(self.dev.c, self.id, bufs.first, bufs.size);
+	netmapc.prepare_offload(self.dev.c, self.id, bufs.first, bufs.ipv4, bufs.tcp)
+	netmapc.slot_mbuf_update(self.dev.c, self.id, bufs.first+1, bufs.size);
 	-- syncing and actually sending out packets is too costly
 	-- done in alloc of bufArray...
 end
@@ -204,8 +206,7 @@ function txQueue:setRate(rate)
 end
 
 function txQueue:__tostring()
-	log:debug("txQueue:__tostring(): self.dev.iface=" .. self.port .. ", id=" .. self.id)
-	return("[TxQueue: interface=%s, ringid=%d"):format(self.dev.port, self.id)
+	return("[TxQueue: interface=%s, ringid=%d]"):format(self.dev.port, self.id)
 end
 
 function txQueue:__serialize()
@@ -254,8 +255,7 @@ function rxQueue:bufArray(s)
 end
 
 function rxQueue:__tostring()
-	log:debug("rxQueue:__tostring(): self.dev.iface=" .. self.port .. ", id=" .. self.id)
-	return("[RxQueue: interface=%s, ringid=%d"):format(self.dev.port, self.id)
+	return("[RxQueue: interface=%s, ringid=%d]"):format(self.dev.port, self.id)
 end
 
 function rxQueue:__serialize()

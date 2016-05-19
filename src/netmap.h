@@ -11,6 +11,25 @@
 #include <string.h>
 #include <linux/if_packet.h> 
 
+#include "util.h"
+
+#define MG_OFFLOAD      0x0100 // redefines multiple flags (data)
+#define MG_CONTEXT      0x0200 // redefines multiple flags (xtxt)
+#define MG_OFF_IPv4     0x0008 // (ctxt) packets are IPv4
+#define MG_OFF_L3       0x0008 // (data) offload IPv4/6 checksum
+#define MG_OFF_L3_SH    0x3    // (ctxt) >> for mask 0x1
+#define MG_OFF_TCP      0x0010 // (ctxt) offload UDP checksum -> 1==TCP, 0==UDP
+#define MG_OFF_L4       0x0010 // (data) offload TCP/UDP checksum
+#define MG_OFF_L4_SH    0x8    // (ctxt) >> for mask 0x1
+#define MG_OFF_VLAN     0x0020 // (data) offload VLAN tag
+#define MG_OFF_VLAN_SH  0x10   // (data) >> for mask 0x1
+
+#define	PKT_TX_TCP_CKSUM   (1ULL << 52)
+#define	PKT_TX_UDP_CKSUM   (3ULL << 52)
+#define	PKT_TX_IP_CKSUM   (1ULL << 54)
+
+#if 0
+
 struct rte_mbuf;
 union rte_ipsec {
 	uint32_t data;
@@ -89,6 +108,7 @@ struct rte_mbuf {
 	struct rte_mbuf_offload *offload_ops;
 };
 
+#endif
 
 static struct nm_devices {
 	struct nm_device* dev[64];
@@ -142,6 +162,7 @@ int get_mac(char* ifname, char* mac); // No BSD
 struct rte_mbuf** nm_alloc_mbuf_array(uint32_t num);
 void mbufs_len_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count, uint16_t len);
 void mbufs_slots_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count);
+void prepare_offload(struct nm_device* dev, uint16_t ringid, uint32_t start, int ipv4, int tcp);
 void slot_mbuf_update(struct nm_device* dev, uint16_t ringid, uint32_t start, uint32_t count);
 uint32_t fetch_tx_pkts(struct nm_device* dev);
 uint32_t fetch_rx_pkts(struct nm_device* dev);

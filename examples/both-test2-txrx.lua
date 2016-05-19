@@ -57,14 +57,11 @@ function loadSlave(queue, txBufS)
 
 	p.start()
 	while dpdk.running() do
-	--for j=0,3 do
 		-- fill packets and set their size 
 		bufs:alloc(packetLen)
 		for i, buf in ipairs(bufs) do
-		--for i=1,bufs.size do
-			--local buf = bufs[i]
 			if buf == nil then
-				log:fatal("buffer was nil")
+				log:fatal("buffer " .. i .." was nil")
 			end
 			local pkt = buf:getUdpPacket(ipv4)
 			
@@ -77,11 +74,17 @@ function loadSlave(queue, txBufS)
 				buf:dump()
 				c = c + 1
 			end
-		end 
+			--log:debug("i=" .. i)
+		end
+		--log:debug("before offloading")
 		--offload checksums to NIC
-		bufs:offloadTcpChecksums(ipv4)
-		
+		bufs:offloadIPChecksums(ipv4)
+		bufs:offloadUdpChecksums(ipv4)
+		--log:debug("after offloading")
+	
+		--log:info("sending bufArray")
 		queue:send(bufs)
+		--log:debug("after sending")
 	end
 	p.stop()
 end
@@ -91,12 +94,19 @@ function counterSlave(queue)
 	local bufs = dpdkMemory.bufArray() -- DPDK
 	--local bufs = queue:bufArray() -- Netmap
 	local rxCtr = stats:newPktRxCounter("counterSlave", "plain")
+	local c = 0
 	while dpdk.running() do
 		local rx = queue:recv(bufs)
 		for i = 1, rx do
 			local buf = bufs[i]
 			local pkt = buf:getUdpPacket()
 			rxCtr:countPacket(buf)
+
+			-- dump first 3 packets
+			if c < 3 then
+				buf:dump()
+				c = c + 1
+			end
 		end
 		-- update() on rxPktCounters must be called to print statistics periodically
 		-- this is not done in countPacket() for performance reasons (needs to check timestamps)

@@ -8,6 +8,8 @@ local netmapc = require "netmapc"
 local packet = require "packet"
 local ffi = require "ffi"
 local log = require "log"
+local dpdkc = require "dpdkc"
+local dpdk = require "dpdk"
 
 local mod = {}
 
@@ -50,9 +52,11 @@ function mod.createMemPool(...)
 	local mem = {}
 	mem.queue = args.queue
 	mem.mbufs = {}
+	mem.mbufsp = ffi.new("struct rte_mbuf*[?]", 2048)
 
 	for i=0,args.queue.nmRing.num_slots -1 do
 		mem.mbufs[i] = ffi.new("struct rte_mbuf")
+		mem.mbufsp[i] = mem.mbufs[i]
 		if mem.queue.tx then
 			mem.queue.dev.c.nm_ring[mem.queue.id].mbufs_tx[i] = mem.mbufs[i]
 		else
@@ -88,7 +92,14 @@ function mempool:bufArray(n)
 	while self.queue:avail() < n do
 		self.queue:sync()
 	end
-	log:debug("generating buffer array")
+
+	local tx = 0 --saves time/branches later
+	if self.queue.tx then
+		tx = 1
+	else
+		tx = 0
+	end
+
 	local bufs = {
 		size = n,
 		maxSize = n,
@@ -98,7 +109,10 @@ function mempool:bufArray(n)
 		queue = self.queue,
 		dev = self.queue.dev,
 		numSlots = self.queue.nmRing.num_slots,
-		first = self.queue.nmRing.head, 
+		first = self.queue.nmRing.head,
+		ipv4 = false,
+		tcp = false,
+		tx = tx
 	}
 	self.queue.bufs = bufs
 	setmetatable(bufs, bufArray)
@@ -115,7 +129,7 @@ function bufArray:alloc(len)
 	-- no actual allocation, just update the the length fields
 	-- wait until there is space in the ring
 	local queue = self.queue
-	while queue:avail() < self.maxSize do
+	while queue:avail() < (self.maxSize + self.tx) do --first is context descriptor (on tx)
 		queue:sync()
 	end
 	self.first = queue.nmRing.head
@@ -135,12 +149,89 @@ function bufArray:freeAll()
 	self.queue.nmRing.cur = newHead
 end
 
+function bufArray:offloadUdpChecksums(ipv4, l2Len, l3Len)
+	self.tcp = false
+	ipv4 = ipv4 == nil or ipv4
+	self.ipv4 = ipv4
+	l2Len = l2Len or 14
+	if ipv4 then
+		l3Len = l3Len or 20
+		local ol_flags = bit.bor(dpdk.PKT_TX_IPV4, dpdk.PKT_TX_IP_CKSUM, dpdk.PKT_TX_UDP_CKSUM)
+		local tx_offload = l2Len + l3Len * 128
+		netmapc.nm_calc_ipv4_pseudo_header_checksums(self.mem.mbufsp, self.size, 20, self.numSlots, self.first+1, ol_flags, tx_offload)
+	else
+		l3Len = l3Len or 40
+		local ol_flags = bit.bor(dpdk.PKT_TX_IPV6, dpdk.PKT_TX_IP_CKSUM, dpdk.PKT_TX_UDP_CKSUM)
+		local tx_offload = l2Len + l3Len * 128
+		netmapc.nm_calc_ipv6_pseudo_header_checksums(self.mem.mbufsp, self.size, 30, self.numSlots, self.first+1, ol_flags, tx_offload)
+	end
+end
+
+--- If called, IP chksum offloading will be done for the first n packets
+--	in the bufArray.
+--	@param ipv4 optional (default = true) specifies, if the buffers contain ipv4 packets
+--	@param l2Len optional (default = 14)
+--	@param l3Len optional (default = 20)
+--	@param n optional (default = bufArray.size) for how many packets in the array, the operation
+--	  should be applied
+function bufArray:offloadIPChecksums(ipv4, l2Len, l3Len, n)
+	-- please do not touch this function without carefully measuring the performance impact
+	-- FIXME: touched this.
+	--	added parameter n
+	ipv4 = ipv4 == nil or ipv4
+	self.ipv4 = ipv4
+	l2Len = l2Len or 14
+	n = n or self.size
+
+	local ol_flags = 0
+	local tx_offload = 0
+	if ipv4 then
+		l3Len = l3Len or 20
+		ol_flags = bit.bor(dpdk.PKT_TX_IPV4, dpdk.PKT_TX_IP_CKSUM)
+		tx_offload = l2Len + l3Len * 128
+	else
+		l3Len = l3Len or 40
+		ol_flags = bit.bor(dpdk.PKT_TX_IPV6, dpdk.PKT_TX_IP_CKSUM)
+		tx_offload = l2Len + l3Len * 128
+	end
+	netmapc.nm_set_offload_flags(self.mem.mbufsp, self.size, self.numSlots, self.first+1, ol_flags, tx_offload)
+end
+
+function bufArray:offloadTcpChecksums(ipv4, l2Len, l3Len)
+	self.tcp = true
+	ipv4 = ipv4 == nil or ipv4
+	self.ipv4 = ipv4
+	l2Len = l2Len or 14
+	if ipv4 then
+		l3Len = l3Len or 20
+		local ol_flags = bit.bor(dpdk.PKT_TX_IPV4, dpdk.PKT_TX_IP_CKSUM, dpdk.PKT_TX_TCP_CKSUM)
+		local tx_offload = l2Len + l3Len * 128
+		netmapc.nm_calc_ipv4_pseudo_header_checksums(self.mem.mbufsp, self.size, 25, self.numSlots, self.first+1, ol_flags, tx_offload)
+	else
+		l3Len = l3Len or 40
+		local ol_flags = bit.bor(dpdk.PKT_TX_IPV6, dpdk.PKT_TX_IP_CKSUM, dpdk.PKT_TX_TCP_CKSUM)
+		local tx_offload = l2Len + l3Len * 128
+		netmapc.nm_calc_ipv6_pseudo_header_checksums(self.mem.mbufsp, self.size, 35, self.numSlots, self.first+1, ol_flags, tx_offload)
+	end
+end
+
+--- Offloads VLAN tags on all packets.
+-- Equivalent to calling pkt:setVlan(vlan, pcp, cfi) on all packets.
+--function bufArray:setVlans(vlan, pcp, cfi)
+	--local tci = vlan + bit.lshift(pcp or 0, 13) + bit.lshift(cfi or 0, 12)
+	--for i = 0, self.size - 1 do
+	--	self.array[i].pkt.vlan_tci = tci
+	--	self.array[i].ol_flags = bit.bor(self.array[i].ol_flags, dpdk.PKT_TX_VLAN_PKT)
+	--end
+--end
+
+
 function bufArray.__index(self, k)
 	if type(k) == "number" then
-		if k + self.first -1 == self.numSlots then
-			return self.mbufs[0]
+		if k + self.first + self.tx >= self.numSlots then
+			k = k - self.numSlots +1
 		end
-		return self.mbufs[k]
+		return self.mbufs[k + self.first +self.tx -1]
 	else
 		return bufArray[k]
 	end
@@ -153,40 +244,28 @@ function bufArray.__len(self)
 end
 
 do
-	local function it(self, i) --TODO modulo wrap around
-		if i+1 == self.numSlots then
-			i = 0
-		end
-		if i == ((self.first + self.size)%self.numSlots) then
+	local function it(tab, i)
+		local self = tab.self
+		if tab.count == self.size then
 			return nil
 		end
-		return i + 1, self.mem.mbufs[i]
+		tab.count = tab.count+1
+		if i+1 >= self.numSlots then
+			i = 0
+		end
+		--if self.mem.mbufs[i] == nil then
+		--	log:fatal("bufArray for (iterator): self.mem.mbufs[" .. i .. "] == nil")
+		--end
+		return i + 1, self.mbufs[i]
 	end
 
 	function bufArray.__ipairs(self)
-		return it, self, self.first
+		return it, {self=self, count=0} , self.first+1
 	end
 end
 
 function bufArray.__tostring(self)
 	return ("first=" .. self.first .. " size=" .. self.size .. " maxSize=" .. self.maxSize)
-end
-
-
-function bufArray:offloadUdpChecksums(ipv4, l2Len, l3Len)
-	-- do nothing for now
-end
-
-function bufArray:offloadIPSec(idx, mode, sec_type)
-	-- do nothing for now
-end
-
-function bufArray:offloadIPChecksums(ipv4, l2Len, l3Len, n)
-	-- do nothing for now
-end
-
-function bufArray:offloadTcpChecksums(ipv4, l2Len, l3Len)
-	-- do nothing for now
 end
 
 return mod
