@@ -3,7 +3,6 @@
 out=$1
 script=$2
 eth1=$3
-eth2=$4
 
 batch_size="128"
 
@@ -28,7 +27,7 @@ do
 		cpufreq-set -f ${c}Ghz -c $i
 	done
 
-	build/MoonGen $script $eth1 $eth2 $batch_size |
+	build/MoonGen $script $eth1 $batch_size |
 		awk '/^\[counterSlave\] Received [0-9]*\.[0-9]*/ {print $3}' >> ${out}-tmp
 done
 
