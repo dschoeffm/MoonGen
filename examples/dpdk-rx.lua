@@ -1,6 +1,6 @@
 local dpdk		= require "dpdk"
-local dpdkMemory	= require "dpdkMemory"
-local dpdkDevice	= require "dpdkDevice"
+local dpdkMemory	= require "memory"
+local dpdkDevice	= require "device"
 local stats		= require "stats"
 local log 		= require "log"
 local ffi = require "ffi"
