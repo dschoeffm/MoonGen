@@ -44,7 +44,6 @@ function loadSlave(queue, txBufS)
 	local c = 0
 	local txCtr = stats:newPktTxCounter("loadSlave", "plain")
 
-	p.start()
 	while dpdk.running() do
 		-- fill packets and set their size 
 		bufs:alloc(packetLen)
@@ -65,5 +64,4 @@ function loadSlave(queue, txBufS)
 		queue:send(bufs)
 	end
 	txCtr:finalize()
-	p.stop()
 end

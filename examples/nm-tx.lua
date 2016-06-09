@@ -43,7 +43,8 @@ function loadSlave(queue, txBufS)
 	local counter = 0
 	local c = 0
 
-	p.start()
+	local txCtr = stats:newPktTxCounter("loadSlave", "plain")
+
 	while dpdk.running() do
 		-- fill packets and set their size 
 		bufs:alloc(packetLen)
@@ -57,18 +58,13 @@ function loadSlave(queue, txBufS)
 			pkt.ip4.src:add(counter)
 			counter = incAndWrap(counter, 100)
 
-			-- dump first 3 packets
-			if c < 3 then
-				buf:dump()
-				c = c + 1
-			end
-			--log:debug("i=" .. i)
+			txCtr:countPacket(buf)
 		end
 		--offload checksums to NIC
 		--bufs:offloadIPChecksums(ipv4)
 		--bufs:offloadUdpChecksums(ipv4)
-	
+		txCtr:update()
 		queue:send(bufs)
 	end
-	p.stop()
+	txCtr:finalize()
 end
