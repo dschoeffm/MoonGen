@@ -42,33 +42,28 @@ function loadSlave(queue, txBufS)
 	local bufs = mem:bufArray(txBufS)
 	local counter = 0
 	local c = 0
+	local txCtr = stats:newPktTxCounter("loadSlave", "plain")
 
 	p.start()
 	while dpdk.running() do
 		-- fill packets and set their size 
 		bufs:alloc(packetLen)
 		for i, buf in ipairs(bufs) do
-			if buf == nil then
-				log:fatal("buffer " .. i .." was nil")
-			end
 			local pkt = buf:getUdpPacket(ipv4)
 			
 			--increment IP
 			pkt.ip4.src:add(counter)
 			counter = incAndWrap(counter, 100)
 
-			-- dump first 3 packets
-			if c < 3 then
-				buf:dump()
-				c = c + 1
-			end
-			--log:debug("i=" .. i)
+			txCtr:countPacket(buf)
 		end
 		--offload checksums to NIC
 		--bufs:offloadIPChecksums(ipv4)
 		--bufs:offloadUdpChecksums(ipv4)
+		txCtr:update()
 	
 		queue:send(bufs)
 	end
+	txCtr:finalize()
 	p.stop()
 end
