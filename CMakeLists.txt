@@ -31,7 +31,6 @@ set(files
 set(libraries
 	-Wl,--whole-archive
 	moon
-	pcap
 )
 
 link_directories(
