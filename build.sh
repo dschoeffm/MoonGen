@@ -1,9 +1,5 @@
 #!/bin/bash
 
-rm libmoon/deps/MoonState/build/libMoonState.a
-rm build/libmoon/libmoon.a
-rm build/MoonGen
-
 (
 cd $(dirname "${BASH_SOURCE[0]}")
 
