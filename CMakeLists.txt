@@ -37,7 +37,7 @@ link_directories(
 	${CMAKE_CURRENT_BINARY_DIR}/libmoon
 	${CMAKE_CURRENT_SOURCE_DIR}/libmoon/deps/dpdk/x86_64-native-linuxapp-gcc/lib
 	${CMAKE_CURRENT_SOURCE_DIR}/libmoon/deps/luajit/usr/local/lib
-	${CMAKE_CURRENT_SOURCE_DIR}/libmoon/deps/MoonState/build
+	${CMAKE_CURRENT_SOURCE_DIR}/libmoon/deps/MoonState/deps/openssl
 )
 
 add_executable(MoonGen ${files})
