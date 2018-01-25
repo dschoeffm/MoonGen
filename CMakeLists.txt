@@ -43,3 +43,4 @@ link_directories(
 add_executable(MoonGen ${files})
 target_link_libraries(MoonGen ${libraries})
 
+add_dependencies(MoonGen moon)
