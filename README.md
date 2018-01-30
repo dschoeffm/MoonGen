@@ -69,17 +69,20 @@ A more detailed evaluation can be found in [our paper](http://www.net.in.tum.de/
 # Installation
 
 1. Install the dependencies (see below)
-2. ./build.sh
-3. sudo ./bind-interfaces.sh
-4. sudo ./setup-hugetlbfs.sh
-5. sudo ./build/MoonGen examples/l3-load-latency.lua 0 1
+2. git submodule update --init --recursive
+3. cd build
+4. cmake ..
+5. make -j
+6. sudo ../bind-interfaces.sh
+7. sudo ../setup-hugetlbfs.sh
+8. sudo ./MoonGen examples/l3-load-latency.lua 0 1
 
 Note: You need to bind NICs to DPDK to use them. `bind-interfaces.sh` does this for all unused NICs (no routing table entry in the system).
 Use `libmoon/deps/dpdk/usertools/dpdk-devbind.py ` to manage NICs manually.
 
 
 ## Dependencies
-* gcc >= 4.8
+* gcc >= 4.9
 * make
 * cmake
 * libnuma-dev
