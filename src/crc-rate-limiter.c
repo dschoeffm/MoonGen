@@ -37,9 +37,8 @@ static struct rte_mbuf* get_delay_pkt_bad_crc(struct rte_mempool* pool, uint32_t
 		delay = min_pkt_size;
 	}
 	// calculate the optimimum packet size
-	if (delay < 1538) {
-		delay = delay;
-	} else if (delay > 2000) {
+	if (delay < 1538) {}
+	else if (delay > 2000) {
 		// 2000 is an arbitrary chosen value as it doesn't really matter
 		// we just need to avoid doing something stupid for packet sizes that are just over 1538 bytes
 		delay = 1538;
