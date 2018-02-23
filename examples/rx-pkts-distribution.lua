@@ -5,6 +5,8 @@ local stats			= require "stats"
 local histogram		= require "histogram"
 local log			= require "log"
 local timer			= require "timer"
+local arp    = require "proto.arp"
+
 
 
 function master(rxPort, saveInterval)
@@ -13,9 +15,15 @@ function master(rxPort, saveInterval)
 	end
 	-- TODO: RSS?
 	local saveInterval = saveInterval or 60
-	local rxDev = device.config{ port = rxPort, dropEnable = false }
+	local rxDev = device.config{ port = rxPort, dropEnable = false, rxQueues=2, txQueues=2 }
 	device.waitForLinks()
 	mg.launchLua("counterSlave", rxDev:getRxQueue(0), saveInterval)
+
+	arp.startArpTask{
+		{ rxQueue = rxDev:getRxQueue(1), txQueue = rxDev:getTxQueue(1), ips = "192.168.0.1" },
+	}
+
+
 	mg.waitForSlaves()
 end
 

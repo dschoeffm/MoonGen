@@ -40,6 +40,7 @@ link_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/libmoon/deps/luajit/usr/local/lib
 	${CMAKE_CURRENT_SOURCE_DIR}/libmoon/deps/MoonState/deps/openssl
 	${CMAKE_CURRENT_SOURCE_DIR}/libmoon/deps/MoonState/deps/tbb
+	${CMAKE_CURRENT_SOURCE_DIR}/libmoon/deps/MoonState/deps/AstraeusVPN/deps/libsodium_install/lib
 )
 
 add_executable(MoonGen ${files})
